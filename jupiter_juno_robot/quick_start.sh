@@ -98,6 +98,22 @@ else
     echo "  Check camera connection or try different index in config"
 fi
 
+# Check ROS 1 installation
+echo ""
+echo "Checking ROS 1 installation..."
+if [ -f "/opt/ros/noetic/setup.bash" ]; then
+    echo "✓ ROS 1 Noetic detected"
+    source /opt/ros/noetic/setup.bash
+    if command -v roscore &> /dev/null; then
+        echo "✓ ROS 1 commands available"
+    else
+        echo "✗ ROS 1 commands not found in PATH"
+    fi
+else
+    echo "✗ ROS 1 Noetic not found!"
+    echo "  Please install ROS 1 Noetic from: http://wiki.ros.org/noetic/Installation/Ubuntu"
+fi
+
 # Environment variables info
 echo ""
 echo "Environment Setup:"
@@ -109,11 +125,16 @@ echo "For OpenAI API, set: export OPENAI_API_KEY='your-key'"
 echo ""
 echo "Test Options:"
 echo "============="
-echo "1. Run standalone test (no ROS 2 required):"
+echo "1. Run standalone test (no ROS 1 required):"
 echo "   python3 test_system_standalone.py"
 echo ""
-echo "2. Run with ROS 2 (requires ROS 2 installation):"
-echo "   ros2 launch jupiter_juno jupiter_juno_launch.py"
+echo "2. Run with ROS 1 (requires ROS 1 installation):"
+echo "   # First, set up workspace:"
+echo "   mkdir -p ~/catkin_ws/src"
+echo "   cp -r src/jupiter_juno ~/catkin_ws/src/"
+echo "   cd ~/catkin_ws && catkin_make && source devel/setup.bash"
+echo "   # Then launch:"
+echo "   roslaunch jupiter_juno jupiter_juno_launch.launch"
 echo ""
 echo "3. Test eye detection only:"
 echo "   cd ../Eye_Detector_Script && python3 main.py"

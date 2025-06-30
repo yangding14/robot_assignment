@@ -5,8 +5,7 @@ import yaml
 import threading
 import queue
 
-import rclpy
-from rclpy.node import Node
+import rospy
 from std_msgs.msg import String, Bool
 
 try:
@@ -17,12 +16,13 @@ except ImportError:
     print("Warning: speech_recognition not available")
 
 
-class SpeechRecognitionNode(Node):
+class SpeechRecognitionNode:
     def __init__(self):
-        super().__init__('speech_recognition_node')
+        # Initialize ROS node
+        rospy.init_node('speech_recognition_node', anonymous=True)
         
         if not HAS_SPEECH_RECOGNITION:
-            self.get_logger().error("speech_recognition library not available!")
+            rospy.logerr("speech_recognition library not available!")
             raise ImportError("speech_recognition library required")
         
         # Load configuration
@@ -34,7 +34,7 @@ class SpeechRecognitionNode(Node):
         
         # Adjust for ambient noise
         with self.microphone as source:
-            self.get_logger().info("Calibrating for ambient noise...")
+            rospy.loginfo("Calibrating for ambient noise...")
             self.recognizer.adjust_for_ambient_noise(source, duration=2)
             self.recognizer.energy_threshold = self.energy_threshold
         
@@ -43,18 +43,18 @@ class SpeechRecognitionNode(Node):
         self.listen_queue = queue.Queue()
         
         # Publishers
-        self.speech_result_publisher = self.create_publisher(
-            String, 
-            self.speech_result_topic, 
-            10
+        self.speech_result_publisher = rospy.Publisher(
+            self.speech_result_topic,
+            String,
+            queue_size=10
         )
         
         # Subscribers
-        self.state_subscriber = self.create_subscription(
-            String,
+        self.state_subscriber = rospy.Subscriber(
             self.system_state_topic,
+            String,
             self.state_callback,
-            10
+            queue_size=10
         )
         
         # Start listening thread
@@ -62,7 +62,7 @@ class SpeechRecognitionNode(Node):
         self.listen_thread = threading.Thread(target=self.listen_loop)
         self.listen_thread.start()
         
-        self.get_logger().info("Speech Recognition Node initialized successfully")
+        rospy.loginfo("Speech Recognition Node initialized successfully")
     
     def load_config(self):
         """Load configuration from YAML file"""
@@ -89,7 +89,7 @@ class SpeechRecognitionNode(Node):
             self.system_state_topic = topics['system_state']
             
         except Exception as e:
-            self.get_logger().error(f"Failed to load config: {e}")
+            rospy.logerr(f"Failed to load config: {e}")
             # Use defaults
             self.engine = 'google'
             self.listen_timeout = 5
@@ -104,7 +104,7 @@ class SpeechRecognitionNode(Node):
         
         if state == "conversation_ready":
             # Start listening for user response
-            self.get_logger().info("Starting to listen for user response")
+            rospy.loginfo("Starting to listen for user response")
             self.listen_queue.put("start")
         elif state == "conversation_ended":
             # Stop listening
@@ -112,7 +112,7 @@ class SpeechRecognitionNode(Node):
     
     def listen_loop(self):
         """Main listening loop running in separate thread"""
-        while self.running:
+        while self.running and not rospy.is_shutdown():
             try:
                 # Wait for listen command
                 command = self.listen_queue.get(timeout=0.5)
@@ -124,13 +124,13 @@ class SpeechRecognitionNode(Node):
             except queue.Empty:
                 continue
             except Exception as e:
-                self.get_logger().error(f"Error in listen loop: {e}")
+                rospy.logerr(f"Error in listen loop: {e}")
     
     def listen_for_speech(self):
         """Listen for speech and publish results"""
         try:
             with self.microphone as source:
-                self.get_logger().info("Listening for speech...")
+                rospy.loginfo("Listening for speech...")
                 
                 # Listen for speech with timeout
                 try:
@@ -140,23 +140,23 @@ class SpeechRecognitionNode(Node):
                         phrase_time_limit=self.phrase_time_limit
                     )
                 except sr.WaitTimeoutError:
-                    self.get_logger().warn("No speech detected within timeout")
+                    rospy.logwarn("No speech detected within timeout")
                     self.publish_result("")
                     return
                 
                 # Recognize speech
-                self.get_logger().info("Recognizing speech...")
+                rospy.loginfo("Recognizing speech...")
                 text = self.recognize_speech(audio)
                 
                 if text:
-                    self.get_logger().info(f"Recognized: {text}")
+                    rospy.loginfo(f"Recognized: {text}")
                     self.publish_result(text)
                 else:
-                    self.get_logger().warn("Could not understand speech")
+                    rospy.logwarn("Could not understand speech")
                     self.publish_result("")
                     
         except Exception as e:
-            self.get_logger().error(f"Error listening for speech: {e}")
+            rospy.logerr(f"Error listening for speech: {e}")
             self.publish_result("")
         finally:
             self.is_listening = False
@@ -174,19 +174,19 @@ class SpeechRecognitionNode(Node):
                 try:
                     text = self.recognizer.recognize_sphinx(audio)
                 except sr.UnknownValueError:
-                    self.get_logger().warn("Sphinx could not understand audio")
+                    rospy.logwarn("Sphinx could not understand audio")
                 except sr.RequestError as e:
-                    self.get_logger().error(f"Sphinx error: {e}")
+                    rospy.logerr(f"Sphinx error: {e}")
             else:
                 # Default to Google
                 text = self.recognizer.recognize_google(audio)
                 
         except sr.UnknownValueError:
-            self.get_logger().warn("Speech recognition could not understand audio")
+            rospy.logwarn("Speech recognition could not understand audio")
         except sr.RequestError as e:
-            self.get_logger().error(f"Could not request results from speech recognition service: {e}")
+            rospy.logerr(f"Could not request results from speech recognition service: {e}")
         except Exception as e:
-            self.get_logger().error(f"Unexpected error in speech recognition: {e}")
+            rospy.logerr(f"Unexpected error in speech recognition: {e}")
         
         return text
     
@@ -195,9 +195,9 @@ class SpeechRecognitionNode(Node):
         msg = String()
         msg.data = text if text else ""
         self.speech_result_publisher.publish(msg)
-        self.get_logger().info(f"Published speech result: {msg.data}")
+        rospy.loginfo(f"Published speech result: {msg.data}")
     
-    def destroy_node(self):
+    def shutdown(self):
         """Clean up resources"""
         self.running = False
         self.is_listening = False
@@ -205,24 +205,19 @@ class SpeechRecognitionNode(Node):
         # Stop listening thread
         if hasattr(self, 'listen_thread'):
             self.listen_thread.join(timeout=2.0)
-        
-        super().destroy_node()
 
 
-def main(args=None):
-    rclpy.init(args=args)
-    
+def main():
     try:
         node = SpeechRecognitionNode()
-        rclpy.spin(node)
-    except KeyboardInterrupt:
+        rospy.spin()
+    except rospy.ROSInterruptException:
         pass
     except Exception as e:
-        print(f"Error: {e}")
+        rospy.logerr(f"Error: {e}")
     finally:
         if 'node' in locals():
-            node.destroy_node()
-        rclpy.shutdown()
+            node.shutdown()
 
 
 if __name__ == '__main__':

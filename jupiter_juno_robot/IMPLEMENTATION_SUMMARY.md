@@ -2,7 +2,7 @@
 
 ## System Overview
 
-The Jupiter Juno Driver Drowsiness Detection System is a comprehensive ROS 2-based solution that monitors driver alertness and provides intelligent interventions. The system combines computer vision, audio alerts, and AI-powered conversations to help keep drivers safe.
+The Jupiter Juno Driver Drowsiness Detection System is a comprehensive ROS 1-based solution that monitors driver alertness and provides intelligent interventions. The system combines computer vision, audio alerts, and AI-powered conversations to help keep drivers safe.
 
 ## Core Components
 
@@ -84,7 +84,7 @@ The Jupiter Juno Driver Drowsiness Detection System is a comprehensive ROS 2-bas
 - **Max Conversation Rounds**: 3
 - **TTS Engine**: pyttsx3 (with gTTS fallback)
 
-## ROS 2 Topics
+## ROS 1 Topics
 
 - `/jupiter_juno/ear_data` - Eye Aspect Ratio values
 - `/jupiter_juno/drowsiness_alert` - Drowsiness detection events
@@ -95,8 +95,8 @@ The Jupiter Juno Driver Drowsiness Detection System is a comprehensive ROS 2-bas
 ## Installation Requirements
 
 ### System Dependencies:
-- Ubuntu 20.04/22.04
-- ROS 2 (Foxy/Galactic/Humble)
+- Ubuntu 20.04
+- ROS 1 Noetic
 - Python 3.8+
 - Camera and microphone
 
@@ -111,14 +111,14 @@ The Jupiter Juno Driver Drowsiness Detection System is a comprehensive ROS 2-bas
 
 ## Testing
 
-### Standalone Test (No ROS 2):
+### Standalone Test (No ROS 1):
 ```bash
 python3 test_system_standalone.py
 ```
 
-### Full ROS 2 System:
+### Full ROS 1 System:
 ```bash
-ros2 launch jupiter_juno jupiter_juno_launch.py
+roslaunch jupiter_juno jupiter_juno_launch.launch
 ```
 
 ### Quick Setup Check:
@@ -131,8 +131,8 @@ ros2 launch jupiter_juno jupiter_juno_launch.py
 ### For Robot Integration:
 1. **Camera**: Configure `camera_index` in YAML
 2. **Audio**: Route through robot speakers
-3. **GPIO**: Add nodes for LED indicators
-4. **Additional Sensors**: Subscribe to relevant topics
+3. **Custom Topics**: Subscribe to relevant topics
+4. **GPIO Integration**: Add nodes for LED indicators
 
 ## Key Design Decisions
 
@@ -165,6 +165,14 @@ ros2 launch jupiter_juno jupiter_juno_launch.py
 3. **No Audio**: Check system volume and audio permissions
 4. **API Errors**: Verify API keys are set correctly
 5. **Performance Issues**: Reduce processing FPS
+
+## ROS 1 Specific Notes
+
+- Uses `rospy` instead of `rclpy`
+- XML launch files instead of Python
+- `catkin_make` build system
+- Traditional ROS 1 package structure
+- Compatible with existing ROS 1 ecosystems
 
 ## Safety Notes
 

@@ -2,7 +2,7 @@
 
 """
 Standalone test script for Jupiter Juno Drowsiness Detection System
-This script demonstrates the system functionality without requiring ROS 2
+This script demonstrates the system functionality without requiring ROS 1
 """
 
 import cv2
@@ -348,8 +348,8 @@ class JupiterJunoStandalone:
 def main():
     """Main entry point"""
     print("=== Jupiter Juno Drowsiness Detection System (Standalone) ===")
-    print("\nThis is a demonstration version that runs without ROS 2.")
-    print("For full functionality, please use the ROS 2 version.\n")
+    print("\nThis is a demonstration version that runs without ROS 1.")
+    print("For full functionality, please use the ROS 1 version.\n")
     
     try:
         system = JupiterJunoStandalone()

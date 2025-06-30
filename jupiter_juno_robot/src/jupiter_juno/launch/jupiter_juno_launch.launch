@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Jupiter Juno Drowsiness Detection System Launch File -->
+  
+  <!-- Parameters -->
+  <arg name="config_file" default="$(find jupiter_juno)/config/drowsiness_config.yaml" />
+  
+  <!-- Load configuration parameters -->
+  <rosparam file="$(arg config_file)" command="load" />
+  
+  <!-- Eye Detector Node -->
+  <node 
+    name="eye_detector_node" 
+    pkg="jupiter_juno" 
+    type="eye_detector_node.py"
+    output="screen"
+    respawn="true"
+    respawn_delay="2.0">
+  </node>
+  
+  <!-- Alert System Node -->
+  <node 
+    name="alert_system_node" 
+    pkg="jupiter_juno" 
+    type="alert_system_node.py"
+    output="screen">
+  </node>
+  
+  <!-- TTS Node -->
+  <node 
+    name="tts_node" 
+    pkg="jupiter_juno" 
+    type="tts_node.py"
+    output="screen">
+  </node>
+  
+  <!-- Speech Recognition Node -->
+  <node 
+    name="speech_recognition_node" 
+    pkg="jupiter_juno" 
+    type="speech_recognition_node.py"
+    output="screen">
+  </node>
+  
+  <!-- Gemini Conversation Node -->
+  <node 
+    name="gemini_conversation_node" 
+    pkg="jupiter_juno" 
+    type="gemini_conversation_node.py"
+    output="screen">
+  </node>
+  
+</launch> 

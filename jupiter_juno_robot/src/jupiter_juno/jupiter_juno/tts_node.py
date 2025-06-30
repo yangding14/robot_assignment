@@ -5,8 +5,7 @@ import yaml
 import queue
 import threading
 
-import rclpy
-from rclpy.node import Node
+import rospy
 from std_msgs.msg import String
 
 # TTS libraries
@@ -27,9 +26,10 @@ except ImportError:
     print("Warning: gtts not available")
 
 
-class TTSNode(Node):
+class TTSNode:
     def __init__(self):
-        super().__init__('tts_node')
+        # Initialize ROS node
+        rospy.init_node('tts_node', anonymous=True)
         
         # Load configuration
         self.load_config()
@@ -42,11 +42,11 @@ class TTSNode(Node):
         self.is_speaking = False
         
         # Subscriber
-        self.tts_subscriber = self.create_subscription(
-            String,
+        self.tts_subscriber = rospy.Subscriber(
             self.tts_topic,
+            String,
             self.tts_callback,
-            10
+            queue_size=10
         )
         
         # Start TTS processing thread
@@ -54,7 +54,7 @@ class TTSNode(Node):
         self.tts_thread = threading.Thread(target=self.process_tts_queue)
         self.tts_thread.start()
         
-        self.get_logger().info(f"TTS Node initialized with {self.engine} engine")
+        rospy.loginfo(f"TTS Node initialized with {self.engine} engine")
     
     def load_config(self):
         """Load configuration from YAML file"""
@@ -79,7 +79,7 @@ class TTSNode(Node):
             self.tts_topic = topics['tts_request']
             
         except Exception as e:
-            self.get_logger().error(f"Failed to load config: {e}")
+            rospy.logerr(f"Failed to load config: {e}")
             # Use defaults
             self.engine = 'pyttsx3'
             self.rate = 150
@@ -101,7 +101,7 @@ class TTSNode(Node):
                 self.engine = 'gtts'
                 self.init_gtts()
             else:
-                self.get_logger().error("No TTS engine available!")
+                rospy.logerr("No TTS engine available!")
                 self.engine = None
     
     def init_pyttsx3(self):
@@ -127,10 +127,10 @@ class TTSNode(Node):
                     # Use first available voice if no match
                     self.tts_engine.setProperty('voice', voices[0].id)
             
-            self.get_logger().info("pyttsx3 TTS engine initialized")
+            rospy.loginfo("pyttsx3 TTS engine initialized")
             
         except Exception as e:
-            self.get_logger().error(f"Failed to initialize pyttsx3: {e}")
+            rospy.logerr(f"Failed to initialize pyttsx3: {e}")
             self.engine = None
     
     def init_gtts(self):
@@ -138,18 +138,18 @@ class TTSNode(Node):
         # gTTS doesn't need initialization, just set parameters
         self.gtts_lang = 'en'
         self.gtts_slow = False
-        self.get_logger().info("gTTS engine initialized")
+        rospy.loginfo("gTTS engine initialized")
     
     def tts_callback(self, msg):
         """Handle incoming TTS requests"""
         text = msg.data
         if text:
             self.tts_queue.put(text)
-            self.get_logger().info(f"TTS request queued: {text}")
+            rospy.loginfo(f"TTS request queued: {text}")
     
     def process_tts_queue(self):
         """Process TTS requests from queue"""
-        while self.running:
+        while self.running and not rospy.is_shutdown():
             try:
                 # Get text from queue with timeout
                 text = self.tts_queue.get(timeout=0.5)
@@ -164,13 +164,13 @@ class TTSNode(Node):
             except queue.Empty:
                 continue
             except Exception as e:
-                self.get_logger().error(f"Error processing TTS: {e}")
+                rospy.logerr(f"Error processing TTS: {e}")
                 self.is_speaking = False
     
     def speak(self, text):
         """Speak the given text using the configured engine"""
         if not self.engine:
-            self.get_logger().warn(f"No TTS engine available to speak: {text}")
+            rospy.logwarn(f"No TTS engine available to speak: {text}")
             return
         
         try:
@@ -180,7 +180,7 @@ class TTSNode(Node):
                 self.speak_gtts(text)
                 
         except Exception as e:
-            self.get_logger().error(f"Error speaking text: {e}")
+            rospy.logerr(f"Error speaking text: {e}")
     
     def speak_pyttsx3(self, text):
         """Speak using pyttsx3"""
@@ -188,7 +188,7 @@ class TTSNode(Node):
             self.tts_engine.say(text)
             self.tts_engine.runAndWait()
         except Exception as e:
-            self.get_logger().error(f"pyttsx3 speak error: {e}")
+            rospy.logerr(f"pyttsx3 speak error: {e}")
             # Reinitialize engine in case of error
             self.init_pyttsx3()
     
@@ -217,9 +217,9 @@ class TTSNode(Node):
             os.unlink(tmp_filename)
             
         except Exception as e:
-            self.get_logger().error(f"gTTS speak error: {e}")
+            rospy.logerr(f"gTTS speak error: {e}")
     
-    def destroy_node(self):
+    def shutdown(self):
         """Clean up resources"""
         self.running = False
         
@@ -233,24 +233,19 @@ class TTSNode(Node):
                 self.tts_engine.stop()
             except:
                 pass
-        
-        super().destroy_node()
 
 
-def main(args=None):
-    rclpy.init(args=args)
-    
+def main():
     try:
         node = TTSNode()
-        rclpy.spin(node)
-    except KeyboardInterrupt:
+        rospy.spin()
+    except rospy.ROSInterruptException:
         pass
     except Exception as e:
-        print(f"Error: {e}")
+        rospy.logerr(f"Error: {e}")
     finally:
         if 'node' in locals():
-            node.destroy_node()
-        rclpy.shutdown()
+            node.shutdown()
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 # Jupiter Juno Driver Drowsiness Detection System
 
-A ROS 2-based intelligent co-driver system that monitors driver alertness and provides timely interventions to enhance road safety.
+A ROS 1-based intelligent co-driver system that monitors driver alertness and provides timely interventions to enhance road safety.
 
 ## Features
 
@@ -8,12 +8,12 @@ A ROS 2-based intelligent co-driver system that monitors driver alertness and pr
 - **Multi-stage Alert System**: Audio alerts followed by engaging AI conversations
 - **Voice Interaction**: Speech recognition and text-to-speech capabilities
 - **AI-Powered Conversations**: Uses Gemini API (or OpenAI as fallback) for natural conversations
-- **Modular Architecture**: Built with ROS 2 for easy integration with robotic systems
+- **Modular Architecture**: Built with ROS 1 for easy integration with robotic systems
 - **Configurable Parameters**: Easily adjustable thresholds and settings via YAML configuration
 
 ## System Architecture
 
-The system consists of five main ROS 2 nodes:
+The system consists of five main ROS 1 nodes:
 
 1. **Eye Detector Node**: Captures video, detects faces, and calculates Eye Aspect Ratio
 2. **Alert System Node**: Manages drowsiness alerts and system state
@@ -23,19 +23,18 @@ The system consists of five main ROS 2 nodes:
 
 ## Prerequisites
 
-- Ubuntu 20.04 or 22.04
-- ROS 2 (Foxy, Galactic, or Humble)
+- Ubuntu 20.04
+- ROS 1 Noetic
 - Python 3.8+
 - Webcam/Camera
 - Microphone and speakers
 
 ## Installation
 
-### 1. Install ROS 2
+### 1. Install ROS 1 Noetic
 
-Follow the official ROS 2 installation guide for your distribution:
-- [ROS 2 Humble (Ubuntu 22.04)](https://docs.ros.org/en/humble/Installation.html)
-- [ROS 2 Foxy (Ubuntu 20.04)](https://docs.ros.org/en/foxy/Installation.html)
+Follow the official ROS 1 Noetic installation guide:
+- [ROS 1 Noetic (Ubuntu 20.04)](http://wiki.ros.org/noetic/Installation/Ubuntu)
 
 ### 2. Install System Dependencies
 
@@ -52,41 +51,46 @@ sudo apt install -y \
     python3-scipy \
     portaudio19-dev \
     espeak \
-    ffmpeg
+    ffmpeg \
+    ros-noetic-cv-bridge \
+    ros-noetic-rospy \
+    ros-noetic-std-msgs \
+    ros-noetic-sensor-msgs
 ```
 
 ### 3. Clone and Setup the Package
 
 ```bash
-# Navigate to your workspace
-cd ~/ros2_ws/src
+# Create workspace if not exists
+mkdir -p ~/catkin_ws/src
+cd ~/catkin_ws/src
 
 # Copy the jupiter_juno_robot directory here
-cp -r /path/to/jupiter_juno_robot .
+cp -r /path/to/jupiter_juno_robot/src/jupiter_juno .
 
 # Install Python dependencies
-cd jupiter_juno_robot
-pip3 install -r requirements.txt
+cd jupiter_juno
+pip3 install -r ../../requirements.txt
 
 # Copy the face landmark model
-cp ../../../Eye_Detector_Script/shape_predictor_68_face_landmarks.dat \
-   src/jupiter_juno/jupiter_juno/
+cp ../../Eye_Detector_Script/shape_predictor_68_face_landmarks.dat \
+   jupiter_juno/
 ```
 
 ### 4. Build the Package
 
 ```bash
 # Go to workspace root
-cd ~/ros2_ws
+cd ~/catkin_ws
 
-# Source ROS 2
-source /opt/ros/humble/setup.bash  # or your ROS 2 version
+# Source ROS 1
+source /opt/ros/noetic/setup.bash
 
 # Build the package
-colcon build --packages-select jupiter_juno
+catkin_make
 
 # Source the workspace
-source install/setup.bash
+source devel/setup.bash
 ```
 
 ## Configuration
@@ -105,7 +109,7 @@ export OPENAI_API_KEY="your-openai-api-key"
 
 ### Configuration File
 
-Edit `src/jupiter_juno/config/drowsiness_config.yaml` to adjust:
+Edit `config/drowsiness_config.yaml` to adjust:
 
 - **Eye Detection Parameters**:
   - `ear_threshold`: EAR threshold for detecting closed eyes (default: 0.20)
@@ -126,43 +130,46 @@ Edit `src/jupiter_juno/config/drowsiness_config.yaml` to adjust:
 1. **Start all nodes with the launch file:**
 
 ```bash
-ros2 launch jupiter_juno jupiter_juno_launch.py
+roslaunch jupiter_juno jupiter_juno_launch.launch
 ```
 
 2. **Or run individual nodes for testing:**
 
 ```bash
-# Terminal 1: Eye Detector
-ros2 run jupiter_juno eye_detector_node
+# Terminal 1: ROS Master
+roscore
 
-# Terminal 2: Alert System
-ros2 run jupiter_juno alert_system_node
+# Terminal 2: Eye Detector
+rosrun jupiter_juno eye_detector_node.py
 
-# Terminal 3: TTS
-ros2 run jupiter_juno tts_node
+# Terminal 3: Alert System
+rosrun jupiter_juno alert_system_node.py
 
-# Terminal 4: Speech Recognition
-ros2 run jupiter_juno speech_recognition_node
+# Terminal 4: TTS
+rosrun jupiter_juno tts_node.py
 
-# Terminal 5: Gemini Conversation
-ros2 run jupiter_juno gemini_conversation_node
+# Terminal 5: Speech Recognition
+rosrun jupiter_juno speech_recognition_node.py
+
+# Terminal 6: Gemini Conversation
+rosrun jupiter_juno gemini_conversation_node.py
 ```
 
 ### Monitoring the System
 
 View topics:
 ```bash
-ros2 topic list
+rostopic list
 ```
 
 Monitor drowsiness detection:
 ```bash
-ros2 topic echo /jupiter_juno/drowsiness_alert
+rostopic echo /jupiter_juno/drowsiness_alert
 ```
 
 View EAR values:
 ```bash
-ros2 topic echo /jupiter_juno/ear_data
+rostopic echo /jupiter_juno/ear_data
 ```
 
 ## How It Works
@@ -202,7 +209,7 @@ ros2 topic echo /jupiter_juno/ear_data
 
 Enable verbose logging:
 ```bash
-ros2 run jupiter_juno eye_detector_node --ros-args --log-level debug
+rosrun jupiter_juno eye_detector_node.py --log-level debug
 ```
 
 ## Integration with Hardware
@@ -230,4 +237,4 @@ This project is licensed under the Apache License 2.0.
 
 - dlib for facial landmark detection
 - Google Generative AI for conversation capabilities
-- ROS 2 community for the robotics framework 
+- ROS 1 community for the robotics framework 

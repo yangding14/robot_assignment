@@ -6,8 +6,7 @@ import threading
 import time
 import numpy as np
 
-import rclpy
-from rclpy.node import Node
+import rospy
 from std_msgs.msg import Bool, String
 
 # Audio libraries
@@ -24,9 +23,10 @@ except ImportError:
     pygame = None
 
 
-class AlertSystemNode(Node):
+class AlertSystemNode:
     def __init__(self):
-        super().__init__('alert_system_node')
+        # Initialize ROS node
+        rospy.init_node('alert_system_node', anonymous=True)
         
         # Load configuration
         self.load_config()
@@ -37,31 +37,32 @@ class AlertSystemNode(Node):
         self.conversation_active = False
         
         # Subscribers
-        self.drowsiness_subscriber = self.create_subscription(
-            Bool,
+        self.drowsiness_subscriber = rospy.Subscriber(
             self.drowsiness_topic,
+            Bool,
             self.drowsiness_callback,
-            10
+            queue_size=10
         )
         
-        self.system_state_subscriber = self.create_subscription(
-            String,
+        self.system_state_subscriber = rospy.Subscriber(
             self.system_state_topic,
+            String,
             self.system_state_callback,
-            10
+            queue_size=10
         )
         
         # Publishers
-        self.tts_publisher = self.create_publisher(String, self.tts_topic, 10)
-        self.state_publisher = self.create_publisher(String, self.system_state_topic, 10)
+        self.tts_publisher = rospy.Publisher(self.tts_topic, String, queue_size=10)
+        self.state_publisher = rospy.Publisher(self.system_state_topic, String, queue_size=10)
         
         # Generate alert sound
         self.generate_alert_sound()
         
         # Send startup message
+        rospy.sleep(1.0)  # Give time for publishers to connect
         self.send_tts_request(self.messages['startup'])
         
-        self.get_logger().info("Alert System Node initialized successfully")
+        rospy.loginfo("Alert System Node initialized successfully")
     
     def load_config(self):
         """Load configuration from YAML file"""
@@ -91,7 +92,7 @@ class AlertSystemNode(Node):
             self.system_state_topic = topics['system_state']
             
         except Exception as e:
-            self.get_logger().error(f"Failed to load config: {e}")
+            rospy.logerr(f"Failed to load config: {e}")
             # Use defaults
             self.alert_duration = 3
             self.alert_frequency = 1000
@@ -160,15 +161,15 @@ class AlertSystemNode(Node):
                     # Clean up
                     os.unlink(tmp_file.name)
             else:
-                self.get_logger().warn("No audio backend available for alert sound")
+                rospy.logwarn("No audio backend available for alert sound")
                 
         except Exception as e:
-            self.get_logger().error(f"Failed to play alert sound: {e}")
+            rospy.logerr(f"Failed to play alert sound: {e}")
     
     def drowsiness_callback(self, msg):
         """Handle drowsiness detection events"""
         if msg.data and not self.is_alerting and not self.conversation_active:
-            self.get_logger().info("Drowsiness alert received - starting alert sequence")
+            rospy.loginfo("Drowsiness alert received - starting alert sequence")
             self.is_alerting = True
             
             # Start alert in separate thread
@@ -195,7 +196,7 @@ class AlertSystemNode(Node):
             self.send_tts_request(self.messages['conversation_prompt'])
             
         except Exception as e:
-            self.get_logger().error(f"Error in alert sequence: {e}")
+            rospy.logerr(f"Error in alert sequence: {e}")
         finally:
             self.is_alerting = False
     
@@ -219,7 +220,7 @@ class AlertSystemNode(Node):
         msg = String()
         msg.data = text
         self.tts_publisher.publish(msg)
-        self.get_logger().info(f"TTS request sent: {text}")
+        rospy.loginfo(f"TTS request sent: {text}")
     
     def publish_state(self, state):
         """Publish system state"""
@@ -227,28 +228,24 @@ class AlertSystemNode(Node):
         msg.data = state
         self.state_publisher.publish(msg)
     
-    def destroy_node(self):
+    def shutdown(self):
         """Clean up resources"""
         self.is_alerting = False
         if self.alert_thread and self.alert_thread.is_alive():
             self.alert_thread.join(timeout=1.0)
-        super().destroy_node()
 
 
-def main(args=None):
-    rclpy.init(args=args)
-    
+def main():
     try:
         node = AlertSystemNode()
-        rclpy.spin(node)
-    except KeyboardInterrupt:
+        rospy.spin()
+    except rospy.ROSInterruptException:
         pass
     except Exception as e:
-        print(f"Error: {e}")
+        rospy.logerr(f"Error: {e}")
     finally:
         if 'node' in locals():
-            node.destroy_node()
-        rclpy.shutdown()
+            node.shutdown()
 
 
 if __name__ == '__main__':

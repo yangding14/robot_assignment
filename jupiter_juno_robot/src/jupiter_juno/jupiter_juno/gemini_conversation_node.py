@@ -4,8 +4,7 @@ import os
 import yaml
 import json
 
-import rclpy
-from rclpy.node import Node
+import rospy
 from std_msgs.msg import String
 
 try:
@@ -23,9 +22,10 @@ except ImportError:
     HAS_OPENAI = False
 
 
-class GeminiConversationNode(Node):
+class GeminiConversationNode:
     def __init__(self):
-        super().__init__('gemini_conversation_node')
+        # Initialize ROS node
+        rospy.init_node('gemini_conversation_node', anonymous=True)
         
         # Load configuration
         self.load_config()
@@ -39,25 +39,25 @@ class GeminiConversationNode(Node):
         self.conversation_history = []
         
         # Publishers
-        self.tts_publisher = self.create_publisher(String, self.tts_topic, 10)
-        self.state_publisher = self.create_publisher(String, self.system_state_topic, 10)
+        self.tts_publisher = rospy.Publisher(self.tts_topic, String, queue_size=10)
+        self.state_publisher = rospy.Publisher(self.system_state_topic, String, queue_size=10)
         
         # Subscribers
-        self.speech_subscriber = self.create_subscription(
-            String,
+        self.speech_subscriber = rospy.Subscriber(
             self.speech_result_topic,
-            self.speech_callback,
-            10
-        )
-        
-        self.state_subscriber = self.create_subscription(
             String,
-            self.system_state_topic,
-            self.state_callback,
-            10
+            self.speech_callback,
+            queue_size=10
         )
         
-        self.get_logger().info(f"Gemini Conversation Node initialized with {self.model_name}")
+        self.state_subscriber = rospy.Subscriber(
+            self.system_state_topic,
+            String,
+            self.state_callback,
+            queue_size=10
+        )
+        
+        rospy.loginfo(f"Gemini Conversation Node initialized with {self.model_name}")
     
     def load_config(self):
         """Load configuration from YAML file"""
@@ -85,7 +85,7 @@ class GeminiConversationNode(Node):
             self.system_state_topic = topics['system_state']
             
         except Exception as e:
-            self.get_logger().error(f"Failed to load config: {e}")
+            rospy.logerr(f"Failed to load config: {e}")
             # Use defaults
             self.api_key_env = 'GEMINI_API_KEY'
             self.model_name = 'gemini-pro'
@@ -105,10 +105,10 @@ class GeminiConversationNode(Node):
                 self.model = genai.GenerativeModel(self.model_name)
                 self.chat = self.model.start_chat(history=[])
                 self.ai_backend = 'gemini'
-                self.get_logger().info("Gemini API initialized successfully")
+                rospy.loginfo("Gemini API initialized successfully")
                 return
             except Exception as e:
-                self.get_logger().error(f"Failed to initialize Gemini: {e}")
+                rospy.logerr(f"Failed to initialize Gemini: {e}")
         
         # Try OpenAI as fallback
         openai_key = os.environ.get('OPENAI_API_KEY')
@@ -116,14 +116,14 @@ class GeminiConversationNode(Node):
             try:
                 openai.api_key = openai_key
                 self.ai_backend = 'openai'
-                self.get_logger().info("OpenAI API initialized as fallback")
+                rospy.loginfo("OpenAI API initialized as fallback")
                 return
             except Exception as e:
-                self.get_logger().error(f"Failed to initialize OpenAI: {e}")
+                rospy.logerr(f"Failed to initialize OpenAI: {e}")
         
         # No AI backend available
         self.ai_backend = None
-        self.get_logger().warn("No AI backend available - using simple responses")
+        rospy.logwarn("No AI backend available - using simple responses")
     
     def state_callback(self, msg):
         """Handle system state changes"""
@@ -138,7 +138,7 @@ class GeminiConversationNode(Node):
         self.conversation_count = 0
         self.conversation_history = []
         self.publish_state("conversation_started")
-        self.get_logger().info("Conversation started")
+        rospy.loginfo("Conversation started")
     
     def speech_callback(self, msg):
         """Handle speech recognition results"""
@@ -149,11 +149,11 @@ class GeminiConversationNode(Node):
         
         # Handle empty input
         if not user_input:
-            self.get_logger().warn("No speech detected, ending conversation")
+            rospy.logwarn("No speech detected, ending conversation")
             self.end_conversation()
             return
         
-        self.get_logger().info(f"User said: {user_input}")
+        rospy.loginfo(f"User said: {user_input}")
         
         # Generate AI response
         response = self.generate_response(user_input)
@@ -173,10 +173,10 @@ class GeminiConversationNode(Node):
             
             # Check if max rounds reached
             if self.conversation_count >= self.max_rounds:
-                self.get_logger().info("Max conversation rounds reached")
+                rospy.loginfo("Max conversation rounds reached")
                 self.end_conversation()
         else:
-            self.get_logger().error("Failed to generate response")
+            rospy.logerr("Failed to generate response")
             self.end_conversation()
     
     def generate_response(self, user_input):
@@ -202,7 +202,7 @@ class GeminiConversationNode(Node):
             return response
             
         except Exception as e:
-            self.get_logger().error(f"Error generating response: {e}")
+            rospy.logerr(f"Error generating response: {e}")
             return "I'm having trouble understanding. Let me tell you a quick tip: Take regular breaks during long drives to stay alert!"
     
     def generate_gemini_response(self, prompt):
@@ -211,7 +211,7 @@ class GeminiConversationNode(Node):
             response = self.chat.send_message(prompt)
             return response.text
         except Exception as e:
-            self.get_logger().error(f"Gemini API error: {e}")
+            rospy.logerr(f"Gemini API error: {e}")
             return None
     
     def generate_openai_response(self, prompt, user_input):
@@ -237,7 +237,7 @@ class GeminiConversationNode(Node):
             return response.choices[0].message.content
             
         except Exception as e:
-            self.get_logger().error(f"OpenAI API error: {e}")
+            rospy.logerr(f"OpenAI API error: {e}")
             return None
     
     def generate_simple_response(self, user_input):
@@ -275,33 +275,23 @@ class GeminiConversationNode(Node):
         """End the conversation session"""
         self.conversation_active = False
         self.publish_state("conversation_ended")
-        self.get_logger().info("Conversation ended")
+        rospy.loginfo("Conversation ended")
     
     def publish_state(self, state):
         """Publish system state"""
         msg = String()
         msg.data = state
         self.state_publisher.publish(msg)
-    
-    def destroy_node(self):
-        """Clean up resources"""
-        super().destroy_node()
 
 
-def main(args=None):
-    rclpy.init(args=args)
-    
+def main():
     try:
         node = GeminiConversationNode()
-        rclpy.spin(node)
-    except KeyboardInterrupt:
+        rospy.spin()
+    except rospy.ROSInterruptException:
         pass
     except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        if 'node' in locals():
-            node.destroy_node()
-        rclpy.shutdown()
+        rospy.logerr(f"Error: {e}")
 
 
 if __name__ == '__main__':

@@ -7,17 +7,17 @@ from scipy.spatial import distance as dist
 import os
 import yaml
 
-import rclpy
-from rclpy.node import Node
-from std_msgs.msg import Float32, Bool, String
+import rospy
+from std_msgs.msg import Float32, Bool
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import threading
 
 
-class EyeDetectorNode(Node):
+class EyeDetectorNode:
     def __init__(self):
-        super().__init__('eye_detector_node')
+        # Initialize ROS node
+        rospy.init_node('eye_detector_node', anonymous=True)
         
         # Load configuration
         self.load_config()
@@ -30,7 +30,7 @@ class EyeDetectorNode(Node):
         predictor_path = os.path.join(current_path, "shape_predictor_68_face_landmarks.dat")
         
         if not os.path.exists(predictor_path):
-            self.get_logger().error(f"Shape predictor file not found at: {predictor_path}")
+            rospy.logerr(f"Shape predictor file not found at: {predictor_path}")
             raise FileNotFoundError(f"Shape predictor file not found at: {predictor_path}")
             
         self.detector = dlib.get_frontal_face_detector()
@@ -45,14 +45,14 @@ class EyeDetectorNode(Node):
         self.drowsiness_detected = False
         
         # Publishers
-        self.ear_publisher = self.create_publisher(Float32, self.ear_topic, 10)
-        self.drowsiness_publisher = self.create_publisher(Bool, self.drowsiness_topic, 10)
-        self.image_publisher = self.create_publisher(Image, '/jupiter_juno/eye_detection_image', 10)
+        self.ear_publisher = rospy.Publisher(self.ear_topic, Float32, queue_size=10)
+        self.drowsiness_publisher = rospy.Publisher(self.drowsiness_topic, Bool, queue_size=10)
+        self.image_publisher = rospy.Publisher('/jupiter_juno/eye_detection_image', Image, queue_size=10)
         
         # Initialize camera
         self.cap = cv2.VideoCapture(self.camera_index)
         if not self.cap.isOpened():
-            self.get_logger().error("Failed to open camera")
+            rospy.logerr("Failed to open camera")
             raise RuntimeError("Failed to open camera")
         
         # Start detection thread
@@ -60,7 +60,7 @@ class EyeDetectorNode(Node):
         self.detection_thread = threading.Thread(target=self.detection_loop)
         self.detection_thread.start()
         
-        self.get_logger().info("Eye Detector Node initialized successfully")
+        rospy.loginfo("Eye Detector Node initialized successfully")
     
     def load_config(self):
         """Load configuration from YAML file"""
@@ -87,7 +87,7 @@ class EyeDetectorNode(Node):
             self.drowsiness_topic = topics['drowsiness_alert']
             
         except Exception as e:
-            self.get_logger().error(f"Failed to load config: {e}")
+            rospy.logerr(f"Failed to load config: {e}")
             # Use defaults
             self.ear_threshold = 0.20
             self.consecutive_frames = 48
@@ -109,12 +109,12 @@ class EyeDetectorNode(Node):
     
     def detection_loop(self):
         """Main detection loop running in separate thread"""
-        frame_delay = 1.0 / self.processing_fps
+        rate = rospy.Rate(self.processing_fps)
         
-        while self.running and rclpy.ok():
+        while self.running and not rospy.is_shutdown():
             ret, frame = self.cap.read()
             if not ret:
-                self.get_logger().warn("Failed to read frame from camera")
+                rospy.logwarn("Failed to read frame from camera")
                 continue
             
             # Convert to grayscale
@@ -155,7 +155,7 @@ class EyeDetectorNode(Node):
                         if not self.drowsiness_detected:
                             self.drowsiness_detected = True
                             self.publish_drowsiness_alert(True)
-                            self.get_logger().warn("Drowsiness detected!")
+                            rospy.logwarn("Drowsiness detected!")
                 else:
                     if self.blink_counter >= self.consecutive_frames and self.drowsiness_detected:
                         self.drowsiness_detected = False
@@ -183,10 +183,9 @@ class EyeDetectorNode(Node):
                 img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
                 self.image_publisher.publish(img_msg)
             except Exception as e:
-                self.get_logger().error(f"Failed to publish image: {e}")
+                rospy.logerr(f"Failed to publish image: {e}")
             
-            # Control frame rate
-            cv2.waitKey(int(frame_delay * 1000))
+            rate.sleep()
     
     def publish_ear(self, ear_value):
         """Publish Eye Aspect Ratio value"""
@@ -200,7 +199,7 @@ class EyeDetectorNode(Node):
         msg.data = is_drowsy
         self.drowsiness_publisher.publish(msg)
     
-    def destroy_node(self):
+    def shutdown(self):
         """Clean up resources"""
         self.running = False
         if hasattr(self, 'detection_thread'):
@@ -208,23 +207,19 @@ class EyeDetectorNode(Node):
         if hasattr(self, 'cap'):
             self.cap.release()
         cv2.destroyAllWindows()
-        super().destroy_node()
 
 
-def main(args=None):
-    rclpy.init(args=args)
-    
+def main():
     try:
         node = EyeDetectorNode()
-        rclpy.spin(node)
-    except KeyboardInterrupt:
+        rospy.spin()
+    except rospy.ROSInterruptException:
         pass
     except Exception as e:
-        print(f"Error: {e}")
+        rospy.logerr(f"Error: {e}")
     finally:
         if 'node' in locals():
-            node.destroy_node()
-        rclpy.shutdown()
+            node.shutdown()
 
 
 if __name__ == '__main__':

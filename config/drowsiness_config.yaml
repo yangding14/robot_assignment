@@ -3,7 +3,7 @@
 # Eye Detection Parameters
 eye_detection:
   # Eye Aspect Ratio threshold for detecting closed eyes
-  ear_threshold: 0.20
+  ear_threshold: 0.25
   # Number of consecutive frames eye must be closed to trigger alert
   consecutive_frames: 48  # ~2 seconds at 24 fps
   # Camera device index

@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Jupiter Juno Complete Drowsiness Detection System -->
+  <!-- Single launch file to start the entire system with GUI -->
+  
+  <!-- Parameters -->
+  <arg name="config_file" default="$(find jupiter_juno)/config/drowsiness_config.yaml" />
+  <arg name="use_gui" default="true" />
+  
+  <!-- Load configuration parameters -->
+  <rosparam file="$(arg config_file)" command="load" />
+  
+  <!-- Core System Nodes -->
+  
+  <!-- Eye Detector Node - Heart of the system -->
+  <node 
+    name="eye_detector_node" 
+    pkg="jupiter_juno" 
+    type="eye_detector_node.py"
+    output="screen"
+    respawn="true"
+    respawn_delay="2.0">
+  </node>
+  
+  <!-- Alert System Node - Handles drowsiness alerts -->
+  <node 
+    name="alert_system_node" 
+    pkg="jupiter_juno" 
+    type="alert_system_node.py"
+    output="screen"
+    respawn="true"
+    respawn_delay="2.0">
+  </node>
+  
+  <!-- Text-to-Speech Node -->
+  <node 
+    name="tts_node" 
+    pkg="jupiter_juno" 
+    type="tts_node.py"
+    output="screen"
+    respawn="true"
+    respawn_delay="2.0">
+  </node>
+  
+  <!-- Speech Recognition Node -->
+  <node 
+    name="speech_recognition_node" 
+    pkg="jupiter_juno" 
+    type="speech_recognition_node.py"
+    output="screen"
+    respawn="true"
+    respawn_delay="2.0">
+  </node>
+  
+  <!-- Gemini Conversation Node - AI Assistant -->
+  <node 
+    name="gemini_conversation_node" 
+    pkg="jupiter_juno" 
+    type="gemini_conversation_node.py"
+    output="screen"
+    respawn="true"
+    respawn_delay="2.0">
+  </node>
+  
+  <!-- GUI Monitor Node - PyQt5 based GUI (ROS Noetic compatible) -->
+  <node if="$(arg use_gui)"
+    name="jupiter_juno_gui_monitor" 
+    pkg="jupiter_juno" 
+    type="gui_monitor_node.py"
+    output="screen"
+    respawn="false">
+    <!-- GUI node should not respawn automatically as it creates windows -->
+  </node>
+  
+  <!-- Information Display -->
+  <node 
+    name="system_info" 
+    pkg="rospy_tutorials" 
+    type="talker" 
+    output="log"
+    if="false">
+    <!-- Disabled by default - can be used for debugging -->
+  </node>
+
+</launch> 

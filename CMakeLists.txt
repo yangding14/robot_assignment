@@ -8,8 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   geometry_msgs
   cv_bridge
-  rqt_gui
-  rqt_gui_py
+  image_transport
 )
 
 ## System dependencies are found with CMake's conventions
@@ -25,8 +24,7 @@ catkin_package(
     sensor_msgs
     geometry_msgs
     cv_bridge
-    rqt_gui
-    rqt_gui_py
+    image_transport
 )
 
 ###########
@@ -49,8 +47,9 @@ catkin_install_python(PROGRAMS
   jupiter_juno/tts_node.py
   jupiter_juno/speech_recognition_node.py
   jupiter_juno/gemini_conversation_node.py
-  jupiter_juno/jupiter_juno_monitor.py
+  jupiter_juno/gui_monitor_node.py
   standalone_gui.py
+  test_system_standalone.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -70,8 +69,8 @@ install(FILES
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/data
 )
 
-# Install plugin files
+# Install package files
 install(FILES
-  plugin.xml
+  package.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 ) 

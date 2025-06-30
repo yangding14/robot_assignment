@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Jupiter Juno Standalone GUI Launch -->
+  <!-- This bypasses RQt and uses PyQt5 directly to avoid Qt binding issues -->
+  
+  <!-- Standalone GUI Node -->
+  <node 
+    name="jupiter_juno_standalone_gui" 
+    pkg="jupiter_juno" 
+    type="standalone_gui.py"
+    output="screen"
+    respawn="false">
+  </node>
+  
+</launch> 

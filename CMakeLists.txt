@@ -50,6 +50,7 @@ catkin_install_python(PROGRAMS
   jupiter_juno/speech_recognition_node.py
   jupiter_juno/gemini_conversation_node.py
   jupiter_juno/jupiter_juno_monitor.py
+  standalone_gui.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

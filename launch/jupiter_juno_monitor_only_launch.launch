@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Jupiter Juno GUI Monitor Only -->
+  <!-- Use this to monitor an already running Jupiter Juno system -->
+  
+  <!-- RQt GUI with Jupiter Juno Monitor -->
+  <node 
+    name="jupiter_juno_monitor" 
+    pkg="rqt_gui" 
+    type="rqt_gui"
+    args="--standalone jupiter_juno.jupiter_juno_monitor.JupiterJunoMonitor"
+    output="screen">
+  </node>
+  
+</launch> 

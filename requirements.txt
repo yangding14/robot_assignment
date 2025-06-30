@@ -25,8 +25,14 @@ pyaudio==0.2.11
 # Speech recognition
 SpeechRecognition==3.8.1
 
-# AI/ML APIs
 requests==2.28.2
+
+# ROS GUI and Qt dependencies
+python-qt5==5.15.4
+python-qt5-dev==5.15.4
+rqt-gui==1.1.2
+rqt-gui-py==1.1.2
+python-qt-binding==0.4.4
 
 # Utility libraries
 python-dateutil==2.8.2

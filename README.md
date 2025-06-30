@@ -82,10 +82,14 @@ sudo apt install -y \
     portaudio19-dev \
     espeak \
     ffmpeg \
+    python3-pyqt5 \
+    python3-pyqt5-dev \
     ros-noetic-cv-bridge \
     ros-noetic-rospy \
     ros-noetic-std-msgs \
-    ros-noetic-sensor-msgs
+    ros-noetic-sensor-msgs \
+    ros-noetic-rqt-gui \
+    ros-noetic-rqt-gui-py
 ```
 
 ### 3. Setup ROS Workspace and Package
@@ -182,8 +186,21 @@ python3 test_system_standalone.py
 cd ~/catkin_ws
 source devel/setup.bash
 
-# Launch the complete system
+# Launch the complete system (console only)
 roslaunch jupiter_juno jupiter_juno_launch.launch
+
+# OR launch with GUI monitor
+roslaunch jupiter_juno jupiter_juno_with_gui_launch.launch
+```
+
+2. **Launch GUI monitor separately (if system is already running):**
+
+```bash
+# Launch only the monitoring GUI
+roslaunch jupiter_juno jupiter_juno_monitor_only_launch.launch
+
+# OR start rqt manually and load the plugin
+rqt --standalone jupiter_juno.jupiter_juno_monitor.JupiterJunoMonitor
 ```
 
 2. **Or run individual nodes for testing:**
@@ -231,6 +248,36 @@ Monitor system state:
 rostopic echo /jupiter_juno/system_state
 ```
 
+## GUI Monitor
+
+The system includes a comprehensive **RQt-based GUI monitor** that provides real-time visualization of the drowsiness detection system.
+
+### GUI Features
+
+- **📹 Camera Feed**: Live video stream with face detection overlay
+- **📊 EAR Monitoring**: Real-time Eye Aspect Ratio values with visual progress bar
+- **🚨 Drowsiness Status**: Color-coded alert status (Green=Alert, Red=Drowsy)
+- **🎤 Speech Recognition**: Live display of user speech input
+- **🔊 TTS Output**: Text-to-speech system output log
+- **⚙️ System State**: Current system state (monitoring, conversation, etc.)
+- **🕒 Timestamps**: Last update times for all components
+
+### GUI Usage
+
+```bash
+# Launch system with GUI
+roslaunch jupiter_juno jupiter_juno_with_gui_launch.launch
+
+# Or monitor existing system
+roslaunch jupiter_juno jupiter_juno_monitor_only_launch.launch
+
+# Or start manually through rqt
+rqt
+# Then: Plugins → Jupiter Juno → Drowsiness Monitor
+```
+
+The GUI automatically subscribes to all Jupiter Juno topics and updates in real-time at 10Hz.
+
 ## How It Works
 
 1. **Startup**: System greets the driver and begins monitoring
@@ -240,6 +287,8 @@ rostopic echo /jupiter_juno/system_state
 5. **Engagement**: System asks if driver wants a joke or safety tip to maintain alertness
 6. **Conversation**: Driver can respond verbally, limited to 3 exchanges to avoid distraction
 7. **Return**: System returns to monitoring mode automatically
+
+**With GUI**: All these states are visually displayed in real-time with camera feed, EAR graphs, and conversation logs.
 
 ## Troubleshooting
 
@@ -287,6 +336,22 @@ rostopic echo /jupiter_juno/system_state
    - Verify API keys are set correctly: `echo $GEMINI_API_KEY`
    - Check API key permissions and quotas
    - Ensure internet connection for API calls
+
+9. **GUI not working**
+   - Install Qt dependencies: `sudo apt install python3-pyqt5 python3-pyqt5-dev`
+   - Check rqt installation: `rqt --list-plugins`
+   - Rebuild workspace after adding GUI: `catkin_make`
+   - If GUI doesn't appear: `rqt --force-discover`
+
+10. **GUI shows "Waiting for camera feed"**
+    - Ensure eye_detector_node is running and publishing to `/jupiter_juno/eye_detection_image`
+    - Check camera permissions and connection
+    - Verify image topic: `rostopic echo /jupiter_juno/eye_detection_image --noarr`
+
+11. **GUI not updating data**
+    - Check all system nodes are running: `rosnode list`
+    - Verify topics are publishing: `rostopic list` and `rostopic hz /jupiter_juno/ear_data`
+    - Restart GUI if frozen: Close and relaunch rqt
 
 ### Debug Mode
 

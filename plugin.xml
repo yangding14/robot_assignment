@@ -1,0 +1,17 @@
+<library path="jupiter_juno">
+  <class name="Jupiter Juno Monitor" type="jupiter_juno.jupiter_juno_monitor.JupiterJunoMonitor" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      A comprehensive monitor for the Jupiter Juno drowsiness detection system showing camera feed, EAR detection, speech recognition, and TTS output in real-time.
+    </description>
+    <qtgui>
+      <group>
+        <label>Jupiter Juno</label>
+        <icon type="theme">applications-multimedia</icon>
+        <statustip>Jupiter Juno monitoring tools</statustip>
+      </group>
+      <label>Drowsiness Monitor</label>
+      <icon type="theme">camera-video</icon>
+      <statustip>Monitor drowsiness detection system status and camera feed</statustip>
+    </qtgui>
+  </class>
+</library> 

@@ -1,0 +1,77 @@
+# Jupiter Juno Drowsiness Detection Configuration
+
+# Eye Detection Parameters
+eye_detection:
+  # Eye Aspect Ratio threshold for detecting closed eyes
+  ear_threshold: 0.20
+  # Number of consecutive frames eye must be closed to trigger alert
+  consecutive_frames: 48  # ~2 seconds at 24 fps
+  # Camera device index
+  camera_index: 0
+  # Frame processing rate (fps)
+  processing_fps: 24
+
+# Alert System Parameters
+alert_system:
+  # Initial alert sound duration (seconds)
+  alert_duration: 3
+  # Alert sound frequency (Hz)
+  alert_frequency: 1000
+  # Volume level (0.0 to 1.0)
+  alert_volume: 0.7
+
+# Gemini API Configuration
+gemini:
+  # API key (set as environment variable GEMINI_API_KEY)
+  api_key_env: "GEMINI_API_KEY"
+  # Model to use
+  model: "gemini-pro"
+  # Maximum conversation rounds
+  max_rounds: 3
+  # System prompt for the AI
+  system_prompt: |
+    You are Jupiter Juno, a friendly co-driver assistant helping to keep drivers alert.
+    Keep responses brief (2-3 sentences max). Be encouraging and supportive.
+    If asked for a joke, tell a short, clean, driving-related joke.
+    If asked for a tip, give a brief safety tip about staying alert while driving.
+
+# Text-to-Speech Configuration
+tts:
+  # TTS engine (options: pyttsx3, gtts)
+  engine: "pyttsx3"
+  # Speech rate (words per minute)
+  rate: 150
+  # Voice gender (0: male, 1: female)
+  voice_gender: 1
+
+# Speech Recognition Configuration
+speech_recognition:
+  # Recognition engine
+  engine: "google"
+  # Timeout for listening (seconds)
+  listen_timeout: 5
+  # Phrase time limit (seconds)
+  phrase_time_limit: 10
+  # Energy threshold for mic
+  energy_threshold: 1000
+
+# System Messages
+messages:
+  startup: "Good morning! Ready for a safe drive? I'll keep an eye on your alertness."
+  drowsiness_detected: "Warning: I've detected signs of drowsiness. Please stay alert!"
+  conversation_prompt: "Would you like to hear a quick driving safety tip or a joke to wake you up?"
+  conversation_end: "Great! Let's keep you alert and cruising safely."
+  shutdown: "Drive safely! Jupiter Juno signing off."
+
+# ROS Topics
+ros_topics:
+  # Eye detection data
+  ear_data: "/jupiter_juno/ear_data"
+  # Drowsiness alert
+  drowsiness_alert: "/jupiter_juno/drowsiness_alert"
+  # TTS request
+  tts_request: "/jupiter_juno/tts_request"
+  # Speech recognition result
+  speech_result: "/jupiter_juno/speech_result"
+  # System state
+  system_state: "/jupiter_juno/system_state" 

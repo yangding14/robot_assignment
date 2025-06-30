@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <launch>
-  <!-- Jupiter Juno Drowsiness Detection System with GUI Monitor -->
+  <!-- Jupiter Juno Drowsiness Detection System WITHOUT GUI -->
+  <!-- Use this if you're having Qt/GUI issues -->
   
   <!-- Parameters -->
   <arg name="config_file" default="$(find jupiter_juno)/config/drowsiness_config.yaml" />
@@ -48,16 +49,6 @@
     pkg="jupiter_juno" 
     type="gemini_conversation_node.py"
     output="screen">
-  </node>
-  
-  <!-- RQt GUI with Jupiter Juno Monitor (standalone, no perspective file) -->
-  <node 
-    name="jupiter_juno_gui" 
-    pkg="rqt_gui" 
-    type="rqt_gui"
-    args="--standalone jupiter_juno.jupiter_juno_monitor.JupiterJunoMonitor --force-discover"
-    output="screen"
-    respawn="false">
   </node>
   
 </launch> 

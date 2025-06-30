@@ -338,10 +338,13 @@ The GUI automatically subscribes to all Jupiter Juno topics and updates in real-
    - Ensure internet connection for API calls
 
 9. **GUI not working**
+   - **First, run the diagnostic script**: `python3 test_gui_setup.py`
    - Install Qt dependencies: `sudo apt install python3-pyqt5 python3-pyqt5-dev`
+   - Install RQt dependencies: `sudo apt install ros-noetic-rqt-gui ros-noetic-rqt-gui-py`
    - Check rqt installation: `rqt --list-plugins`
    - Rebuild workspace after adding GUI: `catkin_make`
    - If GUI doesn't appear: `rqt --force-discover`
+   - **If Qt issues persist, use no-GUI version**: `roslaunch jupiter_juno jupiter_juno_launch_no_gui.launch`
 
 10. **GUI shows "Waiting for camera feed"**
     - Ensure eye_detector_node is running and publishing to `/jupiter_juno/eye_detection_image`

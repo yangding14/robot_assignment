@@ -3,13 +3,14 @@
   <!-- Jupiter Juno GUI Monitor Only -->
   <!-- Use this to monitor an already running Jupiter Juno system -->
   
-  <!-- RQt GUI with Jupiter Juno Monitor -->
+  <!-- RQt GUI with Jupiter Juno Monitor (standalone with force discovery) -->
   <node 
     name="jupiter_juno_monitor" 
     pkg="rqt_gui" 
     type="rqt_gui"
-    args="--standalone jupiter_juno.jupiter_juno_monitor.JupiterJunoMonitor"
-    output="screen">
+    args="--standalone jupiter_juno.jupiter_juno_monitor.JupiterJunoMonitor --force-discover"
+    output="screen"
+    respawn="false">
   </node>
   
 </launch> 

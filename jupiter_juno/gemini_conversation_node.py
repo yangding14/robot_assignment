@@ -3,16 +3,10 @@
 import os
 import yaml
 import json
+import requests
 
 import rospy
 from std_msgs.msg import String
-
-try:
-    import google.generativeai as genai
-    HAS_GEMINI = True
-except ImportError:
-    HAS_GEMINI = False
-    print("Warning: google-generativeai not available")
 
 # Alternative: OpenAI API
 try:
@@ -99,14 +93,18 @@ class GeminiConversationNode:
         """Initialize the AI model (Gemini or alternative)"""
         api_key = os.environ.get(self.api_key_env)
         
-        if HAS_GEMINI and api_key:
+        if api_key:
             try:
-                genai.configure(api_key=api_key)
-                self.model = genai.GenerativeModel(self.model_name)
-                self.chat = self.model.start_chat(history=[])
-                self.ai_backend = 'gemini'
-                rospy.loginfo("Gemini API initialized successfully")
-                return
+                # Test Gemini API connection with a simple request
+                test_response = self.test_gemini_connection(api_key)
+                if test_response:
+                    self.gemini_api_key = api_key
+                    self.gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent"
+                    self.ai_backend = 'gemini'
+                    rospy.loginfo("Gemini API initialized successfully")
+                    return
+                else:
+                    rospy.logerr("Failed to connect to Gemini API")
             except Exception as e:
                 rospy.logerr(f"Failed to initialize Gemini: {e}")
         
@@ -124,6 +122,28 @@ class GeminiConversationNode:
         # No AI backend available
         self.ai_backend = None
         rospy.logwarn("No AI backend available - using simple responses")
+    
+    def test_gemini_connection(self, api_key):
+        """Test connection to Gemini API"""
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent"
+            headers = {
+                'Content-Type': 'application/json',
+            }
+            params = {
+                'key': api_key
+            }
+            data = {
+                "contents": [{
+                    "parts": [{"text": "Hello, respond with 'OK' if you can hear me."}]
+                }]
+            }
+            
+            response = requests.post(url, headers=headers, params=params, json=data, timeout=10)
+            return response.status_code == 200
+        except Exception as e:
+            rospy.logerr(f"Gemini connection test failed: {e}")
+            return False
     
     def state_callback(self, msg):
         """Handle system state changes"""
@@ -206,10 +226,72 @@ class GeminiConversationNode:
             return "I'm having trouble understanding. Let me tell you a quick tip: Take regular breaks during long drives to stay alert!"
     
     def generate_gemini_response(self, prompt):
-        """Generate response using Gemini API"""
+        """Generate response using Gemini API with direct HTTP calls"""
         try:
-            response = self.chat.send_message(prompt)
-            return response.text
+            headers = {
+                'Content-Type': 'application/json',
+            }
+            params = {
+                'key': self.gemini_api_key
+            }
+            
+            # Build conversation context including history
+            contents = []
+            
+            # Add conversation history
+            for item in self.conversation_history[-2:]:  # Last 2 exchanges
+                contents.append({
+                    "parts": [{"text": f"User: {item['user']}"}],
+                    "role": "user"
+                })
+                contents.append({
+                    "parts": [{"text": item['assistant']}],
+                    "role": "model"
+                })
+            
+            # Add current prompt
+            contents.append({
+                "parts": [{"text": prompt}],
+                "role": "user"
+            })
+            
+            data = {
+                "contents": contents,
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "topK": 40,
+                    "topP": 0.95,
+                    "maxOutputTokens": 100,
+                }
+            }
+            
+            response = requests.post(
+                self.gemini_api_url, 
+                headers=headers, 
+                params=params, 
+                json=data, 
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if 'candidates' in result and len(result['candidates']) > 0:
+                    candidate = result['candidates'][0]
+                    if 'content' in candidate and 'parts' in candidate['content']:
+                        return candidate['content']['parts'][0]['text']
+                else:
+                    rospy.logerr(f"Unexpected Gemini API response structure: {result}")
+                    return None
+            else:
+                rospy.logerr(f"Gemini API error: {response.status_code} - {response.text}")
+                return None
+                
+        except requests.exceptions.Timeout:
+            rospy.logerr("Gemini API request timed out")
+            return None
+        except requests.exceptions.RequestException as e:
+            rospy.logerr(f"Gemini API request error: {e}")
+            return None
         except Exception as e:
             rospy.logerr(f"Gemini API error: {e}")
             return None

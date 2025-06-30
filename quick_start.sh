@@ -56,12 +56,12 @@ else
     echo "  Install with: pip install SpeechRecognition pyaudio"
 fi
 
-# Gemini API
-if pip show google-generativeai &> /dev/null; then
-    echo "✓ Gemini API installed"
+# Requests library for API calls
+if pip show requests &> /dev/null; then
+    echo "✓ Requests library installed (needed for Gemini API calls)"
 else
-    echo "✗ Gemini API not installed"
-    echo "  Install with: pip install google-generativeai"
+    echo "✗ Requests library not installed"
+    echo "  Install with: pip install requests"
 fi
 
 # Check for dlib

@@ -106,7 +106,7 @@ The Jupiter Juno Driver Drowsiness Detection System is a comprehensive ROS 1-bas
 ### Python Packages:
 - **Core**: opencv-python, dlib, scipy, numpy, pyyaml
 - **Audio**: gTTS, pygame, pydub, simpleaudio, pyaudio
-- **AI**: google-generativeai, openai, SpeechRecognition
+- **AI**: requests (for Gemini API calls), openai, SpeechRecognition
 
 ### Critical Files:
 - `shape_predictor_68_face_landmarks.dat` - Required for face detection

@@ -243,7 +243,7 @@ To integrate with your Jupiter Juno robot hardware:
 ### Dependencies
 - **Core**: opencv-python, dlib, scipy, numpy, pyyaml
 - **Audio**: gTTS, pygame, pydub, simpleaudio, pyaudio
-- **AI**: google-generativeai, openai, SpeechRecognition
+- **AI**: requests (for Gemini API calls), openai, SpeechRecognition
 
 ## Contributing
 

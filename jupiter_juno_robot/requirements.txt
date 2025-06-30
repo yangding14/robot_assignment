@@ -3,28 +3,37 @@
 # cv_bridge
 
 # Computer Vision and Face Detection
-opencv-python>=4.5.0
-dlib>=19.22.0
-scipy>=1.7.0
-numpy>=1.21.0
+opencv-python==4.8.1.78
+dlib==19.24.2
+scipy==1.11.1
+numpy==1.24.3
+
+# Image processing and machine learning
+scikit-image==0.21.0
+imutils==0.5.4
+
+# Configuration and data handling
+PyYAML==6.0.1
+python-dotenv==1.0.0
 
 # Audio and TTS
-pyttsx3>=2.90
-gtts>=2.2.0
-pygame>=2.0.0
-simpleaudio>=1.0.4
-pyaudio>=0.2.11
+gTTS==2.3.2
+pygame==2.5.2
+pydub==0.25.1
+simpleaudio==1.0.4
+pyaudio==0.2.11
 
-# Speech Recognition
-SpeechRecognition>=3.8.1
+# Speech recognition
+SpeechRecognition==3.10.0
 
 # AI/ML APIs
-google-generativeai>=0.3.0
-openai>=0.27.0
+google-generativeai==0.3.1
+openai==0.28.1
+requests==2.31.0
 
-# Utilities
-PyYAML>=6.0
-pillow>=9.0.0
+# Utility libraries
+python-dateutil==2.8.2
+packaging==23.1
 
 # Optional dependencies for better performance
 # pocketsphinx>=0.1.15  # For offline speech recognition 

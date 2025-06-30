@@ -24,12 +24,13 @@ The Jupiter Juno Driver Drowsiness Detection System is a comprehensive ROS 1-bas
   - Handles startup and shutdown messages
 
 ### 3. TTS Node (`tts_node.py`)
-- **Purpose**: Text-to-speech conversion
+- **Purpose**: Text-to-speech conversion using Google Text-to-Speech
 - **Key Features**:
-  - Supports multiple TTS engines (pyttsx3, gTTS)
-  - Queued speech processing
-  - Configurable voice and speech rate
-  - Thread-safe operation
+  - Uses gTTS for high-quality speech synthesis
+  - Supports multiple languages (configurable)
+  - Requires internet connection for speech generation
+  - Uses pygame for audio playback
+  - Thread-safe operation with queued processing
 
 ### 4. Speech Recognition Node (`speech_recognition_node.py`)
 - **Purpose**: Voice input processing
@@ -82,7 +83,8 @@ The Jupiter Juno Driver Drowsiness Detection System is a comprehensive ROS 1-bas
 - **Consecutive Frames**: 48 (2 seconds at 24 FPS)
 - **Alert Duration**: 3 seconds
 - **Max Conversation Rounds**: 3
-- **TTS Engine**: pyttsx3 (with gTTS fallback)
+- **TTS Engine**: gTTS (Google Text-to-Speech)
+- **Language**: 'en' (configurable)
 
 ## ROS 1 Topics
 
@@ -99,10 +101,11 @@ The Jupiter Juno Driver Drowsiness Detection System is a comprehensive ROS 1-bas
 - ROS 1 Noetic
 - Python 3.8+
 - Camera and microphone
+- Internet connection (for gTTS)
 
 ### Python Packages:
 - **Core**: opencv-python, dlib, scipy, numpy, pyyaml
-- **Audio**: pyttsx3, pygame, simpleaudio, pyaudio
+- **Audio**: gTTS, pygame, pydub, simpleaudio, pyaudio
 - **AI**: google-generativeai, openai, SpeechRecognition
 
 ### Critical Files:
@@ -126,6 +129,27 @@ roslaunch jupiter_juno jupiter_juno_launch.launch
 ./quick_start.sh
 ```
 
+## TTS Implementation Details
+
+### Google Text-to-Speech (gTTS):
+- **Advantages**:
+  - High-quality, natural-sounding speech
+  - Supports 100+ languages
+  - Reliable Google infrastructure
+  
+- **Requirements**:
+  - Internet connection for speech generation
+  - First request may have slight delay
+  
+- **Audio Pipeline**:
+  1. Text → gTTS API → MP3 file
+  2. MP3 file → pygame mixer → Audio output
+  3. Temporary file cleanup
+
+### Alternative Fallback:
+- System can be modified to use offline TTS like `espeak` if needed
+- Configuration allows switching TTS engines
+
 ## Hardware Integration
 
 ### For Robot Integration:
@@ -138,7 +162,7 @@ roslaunch jupiter_juno jupiter_juno_launch.launch
 
 1. **Modular Architecture**: Each component is a separate ROS node for flexibility
 2. **Configuration-Driven**: YAML file for easy parameter adjustment
-3. **Multiple Fallbacks**: Alternative engines for TTS and AI
+3. **gTTS for Quality**: Chose gTTS over offline options for better speech quality
 4. **Thread Safety**: Separate threads for blocking operations
 5. **State Management**: Centralized state coordination
 
@@ -148,23 +172,24 @@ roslaunch jupiter_juno jupiter_juno_launch.launch
 - 2-second confirmation prevents false positives
 - Conversation limited to prevent distraction
 - Audio alerts prioritized over conversation
+- gTTS caching could be added for repeated phrases
 
 ## Future Enhancements
 
-1. Add visual alerts (LED indicators)
-2. Integration with vehicle CAN bus
-3. Cloud-based analytics
-4. Multi-language support
-5. Personalized EAR thresholds
-6. Integration with emergency services
+1. Add local TTS caching to reduce internet dependency
+2. Support for offline TTS engines as fallback
+3. Multi-language support with language detection
+4. Voice cloning for personalized responses
+5. Integration with vehicle audio systems
+6. Compression for audio files to reduce bandwidth
 
 ## Troubleshooting Tips
 
-1. **No Face Detection**: Check lighting and camera angle
-2. **False Positives**: Adjust EAR threshold in config
-3. **No Audio**: Check system volume and audio permissions
-4. **API Errors**: Verify API keys are set correctly
-5. **Performance Issues**: Reduce processing FPS
+1. **No Speech Output**: Check internet connection and gTTS installation
+2. **Poor Audio Quality**: Verify pygame installation and audio drivers
+3. **TTS Delays**: Check network latency and consider caching
+4. **API Rate Limits**: Monitor gTTS usage for rate limiting
+5. **Language Issues**: Ensure correct language codes in configuration
 
 ## ROS 1 Specific Notes
 
@@ -179,4 +204,5 @@ roslaunch jupiter_juno jupiter_juno_launch.launch
 - System is an assistant, not a replacement for driver awareness
 - Regular breaks still recommended
 - Adjust thresholds based on individual characteristics
-- Test thoroughly before deployment 
+- Test thoroughly before deployment
+- Internet dependency should be considered for safety-critical applications 

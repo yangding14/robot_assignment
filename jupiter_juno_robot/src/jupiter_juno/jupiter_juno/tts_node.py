@@ -4,18 +4,13 @@ import os
 import yaml
 import queue
 import threading
+import tempfile
+import time
 
 import rospy
 from std_msgs.msg import String
 
 # TTS libraries
-try:
-    import pyttsx3
-    HAS_PYTTSX3 = True
-except ImportError:
-    HAS_PYTTSX3 = False
-    print("Warning: pyttsx3 not available")
-
 try:
     from gtts import gTTS
     import pygame
@@ -23,7 +18,15 @@ try:
     HAS_GTTS = True
 except ImportError:
     HAS_GTTS = False
-    print("Warning: gtts not available")
+    print("Warning: gtts and pygame not available")
+
+try:
+    import pydub
+    from pydub import AudioSegment
+    from pydub.playback import play
+    HAS_PYDUB = True
+except ImportError:
+    HAS_PYDUB = False
 
 
 class TTSNode:
@@ -71,8 +74,8 @@ class TTSNode:
             # TTS parameters
             tts_config = config['tts']
             self.engine = tts_config['engine']
-            self.rate = tts_config['rate']
-            self.voice_gender = tts_config['voice_gender']
+            self.language = tts_config.get('language', 'en')
+            self.slow_speech = tts_config.get('slow_speech', False)
             
             # ROS topics
             topics = config['ros_topics']
@@ -81,63 +84,29 @@ class TTSNode:
         except Exception as e:
             rospy.logerr(f"Failed to load config: {e}")
             # Use defaults
-            self.engine = 'pyttsx3'
-            self.rate = 150
-            self.voice_gender = 1
+            self.engine = 'gtts'
+            self.language = 'en'
+            self.slow_speech = False
             self.tts_topic = '/jupiter_juno/tts_request'
     
     def init_tts_engine(self):
         """Initialize the TTS engine based on configuration"""
-        if self.engine == 'pyttsx3' and HAS_PYTTSX3:
-            self.init_pyttsx3()
-        elif self.engine == 'gtts' and HAS_GTTS:
+        if self.engine == 'gtts' and HAS_GTTS:
             self.init_gtts()
         else:
-            # Fallback selection
-            if HAS_PYTTSX3:
-                self.engine = 'pyttsx3'
-                self.init_pyttsx3()
-            elif HAS_GTTS:
+            # Check what's available and use fallback
+            if HAS_GTTS:
                 self.engine = 'gtts'
                 self.init_gtts()
             else:
                 rospy.logerr("No TTS engine available!")
                 self.engine = None
     
-    def init_pyttsx3(self):
-        """Initialize pyttsx3 engine"""
-        try:
-            self.tts_engine = pyttsx3.init()
-            
-            # Set properties
-            self.tts_engine.setProperty('rate', self.rate)
-            
-            # Set voice (try to select by gender)
-            voices = self.tts_engine.getProperty('voices')
-            if voices:
-                # Try to find a voice matching the gender preference
-                for voice in voices:
-                    if self.voice_gender == 1 and 'female' in voice.name.lower():
-                        self.tts_engine.setProperty('voice', voice.id)
-                        break
-                    elif self.voice_gender == 0 and 'male' in voice.name.lower():
-                        self.tts_engine.setProperty('voice', voice.id)
-                        break
-                else:
-                    # Use first available voice if no match
-                    self.tts_engine.setProperty('voice', voices[0].id)
-            
-            rospy.loginfo("pyttsx3 TTS engine initialized")
-            
-        except Exception as e:
-            rospy.logerr(f"Failed to initialize pyttsx3: {e}")
-            self.engine = None
-    
     def init_gtts(self):
         """Initialize gTTS engine"""
         # gTTS doesn't need initialization, just set parameters
-        self.gtts_lang = 'en'
-        self.gtts_slow = False
+        self.gtts_lang = self.language
+        self.gtts_slow = self.slow_speech
         rospy.loginfo("gTTS engine initialized")
     
     def tts_callback(self, msg):
@@ -174,29 +143,15 @@ class TTSNode:
             return
         
         try:
-            if self.engine == 'pyttsx3' and HAS_PYTTSX3:
-                self.speak_pyttsx3(text)
-            elif self.engine == 'gtts' and HAS_GTTS:
+            if self.engine == 'gtts' and HAS_GTTS:
                 self.speak_gtts(text)
                 
         except Exception as e:
             rospy.logerr(f"Error speaking text: {e}")
     
-    def speak_pyttsx3(self, text):
-        """Speak using pyttsx3"""
-        try:
-            self.tts_engine.say(text)
-            self.tts_engine.runAndWait()
-        except Exception as e:
-            rospy.logerr(f"pyttsx3 speak error: {e}")
-            # Reinitialize engine in case of error
-            self.init_pyttsx3()
-    
     def speak_gtts(self, text):
         """Speak using gTTS"""
         try:
-            import tempfile
-            
             # Generate speech
             tts = gTTS(text=text, lang=self.gtts_lang, slow=self.gtts_slow)
             
@@ -205,16 +160,26 @@ class TTSNode:
                 tmp_filename = tmp_file.name
                 tts.save(tmp_filename)
             
-            # Play the audio file
-            pygame.mixer.music.load(tmp_filename)
-            pygame.mixer.music.play()
+            # Play the audio file using pygame
+            if HAS_GTTS:  # pygame is included with gtts check
+                pygame.mixer.music.load(tmp_filename)
+                pygame.mixer.music.play()
+                
+                # Wait for playback to complete
+                while pygame.mixer.music.get_busy():
+                    pygame.time.Clock().tick(10)
+            elif HAS_PYDUB:
+                # Alternative playback with pydub
+                audio = AudioSegment.from_mp3(tmp_filename)
+                play(audio)
+            else:
+                rospy.logwarn("No audio playback library available")
             
-            # Wait for playback to complete
-            while pygame.mixer.music.get_busy():
-                pygame.time.Clock().tick(10)
-            
-            # Clean up
-            os.unlink(tmp_filename)
+            # Clean up temporary file
+            try:
+                os.unlink(tmp_filename)
+            except OSError:
+                pass  # File might already be deleted
             
         except Exception as e:
             rospy.logerr(f"gTTS speak error: {e}")
@@ -226,13 +191,6 @@ class TTSNode:
         # Wait for TTS thread to finish
         if hasattr(self, 'tts_thread'):
             self.tts_thread.join(timeout=2.0)
-        
-        # Clean up TTS engine
-        if self.engine == 'pyttsx3' and hasattr(self, 'tts_engine'):
-            try:
-                self.tts_engine.stop()
-            except:
-                pass
 
 
 def main():

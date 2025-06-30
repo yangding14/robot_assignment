@@ -37,12 +37,12 @@ gemini:
 
 # Text-to-Speech Configuration
 tts:
-  # TTS engine (options: pyttsx3, gtts)
-  engine: "pyttsx3"
-  # Speech rate (words per minute)
-  rate: 150
-  # Voice gender (0: male, 1: female)
-  voice_gender: 1
+  # TTS engine: "gtts" (Google Text-to-Speech)
+  engine: "gtts"
+  # Language for TTS (ISO 639-1 code)
+  language: "en"
+  # Slow speech rate for better clarity
+  slow_speech: false
 
 # Speech Recognition Configuration
 speech_recognition:

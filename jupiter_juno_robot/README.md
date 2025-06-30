@@ -6,7 +6,7 @@ A ROS 1-based intelligent co-driver system that monitors driver alertness and pr
 
 - **Real-time Eye Detection**: Monitors driver's eye aspect ratio (EAR) to detect drowsiness
 - **Multi-stage Alert System**: Audio alerts followed by engaging AI conversations
-- **Voice Interaction**: Speech recognition and text-to-speech capabilities
+- **Voice Interaction**: Speech recognition and text-to-speech capabilities using gTTS
 - **AI-Powered Conversations**: Uses Gemini API (or OpenAI as fallback) for natural conversations
 - **Modular Architecture**: Built with ROS 1 for easy integration with robotic systems
 - **Configurable Parameters**: Easily adjustable thresholds and settings via YAML configuration
@@ -17,7 +17,7 @@ The system consists of five main ROS 1 nodes:
 
 1. **Eye Detector Node**: Captures video, detects faces, and calculates Eye Aspect Ratio
 2. **Alert System Node**: Manages drowsiness alerts and system state
-3. **TTS Node**: Converts text to speech for robot communication
+3. **TTS Node**: Converts text to speech using Google Text-to-Speech (gTTS)
 4. **Speech Recognition Node**: Processes driver voice input
 5. **Gemini Conversation Node**: Handles AI-powered conversations
 
@@ -28,6 +28,7 @@ The system consists of five main ROS 1 nodes:
 - Python 3.8+
 - Webcam/Camera
 - Microphone and speakers
+- Internet connection (required for gTTS)
 
 ## Installation
 
@@ -119,6 +120,10 @@ Edit `config/drowsiness_config.yaml` to adjust:
   - `alert_duration`: Duration of alert sound in seconds
   - `alert_frequency`: Frequency of alert beep in Hz
   
+- **TTS Settings**:
+  - `language`: Language for gTTS (default: 'en')
+  - `slow_speech`: Enable slower speech for clarity
+  
 - **Conversation Settings**:
   - `max_rounds`: Maximum conversation rounds (default: 3)
   - `system_prompt`: AI assistant personality and behavior
@@ -194,13 +199,19 @@ rostopic echo /jupiter_juno/ear_data
    - Check system volume
    - Test with: `espeak "test"`
    - Install missing audio packages
+   - Ensure internet connection for gTTS
 
-3. **Speech recognition not working**
+3. **gTTS not working**
+   - Check internet connection (gTTS requires online access)
+   - Verify gTTS installation: `pip3 show gTTS`
+   - Check for rate limiting if making many requests
+
+4. **Speech recognition not working**
    - Check microphone permissions
    - Test microphone with system settings
    - Ensure internet connection for Google Speech Recognition
 
-4. **Camera not detected**
+5. **Camera not detected**
    - Check camera permissions
    - Try different camera index in config (0, 1, 2...)
    - Test with: `cheese` or `v4l2-ctl --list-devices`
@@ -221,6 +232,19 @@ To integrate with your Jupiter Juno robot hardware:
 3. **Custom Topics**: Subscribe to additional sensor data as needed
 4. **GPIO Integration**: Add nodes for LED indicators or other hardware alerts
 
+## Technical Notes
+
+### TTS Implementation
+- Uses Google Text-to-Speech (gTTS) for high-quality speech synthesis
+- Requires internet connection for speech generation
+- Supports multiple languages (configure in YAML)
+- Audio played back using pygame
+
+### Dependencies
+- **Core**: opencv-python, dlib, scipy, numpy, pyyaml
+- **Audio**: gTTS, pygame, pydub, simpleaudio, pyaudio
+- **AI**: google-generativeai, openai, SpeechRecognition
+
 ## Contributing
 
 1. Fork the repository
@@ -236,5 +260,6 @@ This project is licensed under the Apache License 2.0.
 ## Acknowledgments
 
 - dlib for facial landmark detection
+- Google Text-to-Speech for high-quality speech synthesis
 - Google Generative AI for conversation capabilities
 - ROS 1 community for the robotics framework 

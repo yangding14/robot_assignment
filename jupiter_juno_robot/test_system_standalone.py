@@ -14,14 +14,17 @@ import time
 import threading
 import queue
 import yaml
+import tempfile
 
 # Try to import optional libraries
 try:
-    import pyttsx3
+    from gtts import gTTS
+    import pygame
+    pygame.mixer.init()
     HAS_TTS = True
 except:
     HAS_TTS = False
-    print("Warning: pyttsx3 not available, TTS disabled")
+    print("Warning: gTTS and pygame not available, TTS disabled")
 
 try:
     import speech_recognition as sr
@@ -117,27 +120,16 @@ class JupiterJunoStandalone:
         print(f"Eye detector initialized with predictor: {predictor_path}")
     
     def init_tts(self):
-        """Initialize text-to-speech"""
+        """Initialize text-to-speech with gTTS"""
         if HAS_TTS:
             try:
-                self.tts_engine = pyttsx3.init()
-                self.tts_engine.setProperty('rate', 150)
-                
-                # Try to set female voice
-                voices = self.tts_engine.getProperty('voices')
-                if voices:
-                    for voice in voices:
-                        if 'female' in voice.name.lower():
-                            self.tts_engine.setProperty('voice', voice.id)
-                            break
-                
                 # Start TTS thread
                 self.tts_thread = threading.Thread(target=self.tts_worker)
                 self.tts_thread.start()
                 
-                print("TTS initialized successfully")
+                print("gTTS initialized successfully")
             except Exception as e:
-                print(f"Failed to initialize TTS: {e}")
+                print(f"Failed to initialize gTTS: {e}")
                 HAS_TTS = False
     
     def init_speech_recognition(self):
@@ -173,13 +165,33 @@ class JupiterJunoStandalone:
             print(f"[TTS]: {text}")
     
     def tts_worker(self):
-        """Worker thread for TTS"""
+        """Worker thread for TTS using gTTS"""
         while self.running:
             try:
                 text = self.tts_queue.get(timeout=0.5)
                 if HAS_TTS:
-                    self.tts_engine.say(text)
-                    self.tts_engine.runAndWait()
+                    # Generate speech with gTTS
+                    tts = gTTS(text=text, lang='en', slow=False)
+                    
+                    # Save to temporary file
+                    with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as tmp_file:
+                        tmp_filename = tmp_file.name
+                        tts.save(tmp_filename)
+                    
+                    # Play the audio file
+                    pygame.mixer.music.load(tmp_filename)
+                    pygame.mixer.music.play()
+                    
+                    # Wait for playback to complete
+                    while pygame.mixer.music.get_busy():
+                        pygame.time.Clock().tick(10)
+                    
+                    # Clean up
+                    try:
+                        os.unlink(tmp_filename)
+                    except OSError:
+                        pass
+                
                 self.tts_queue.task_done()
             except queue.Empty:
                 continue

@@ -32,12 +32,20 @@ pip install opencv-python numpy scipy pyyaml
 echo ""
 echo "Checking optional dependencies..."
 
-# TTS
-if pip show pyttsx3 &> /dev/null; then
-    echo "✓ Text-to-Speech (pyttsx3) installed"
+# TTS (gTTS)
+if pip show gTTS &> /dev/null; then
+    echo "✓ Text-to-Speech (gTTS) installed"
 else
-    echo "✗ Text-to-Speech (pyttsx3) not installed"
-    echo "  Install with: pip install pyttsx3"
+    echo "✗ Text-to-Speech (gTTS) not installed"
+    echo "  Install with: pip install gTTS pygame"
+fi
+
+# Audio playback
+if pip show pygame &> /dev/null; then
+    echo "✓ Audio playback (pygame) installed"
+else
+    echo "✗ Audio playback (pygame) not installed"
+    echo "  Install with: pip install pygame"
 fi
 
 # Speech Recognition
@@ -98,6 +106,16 @@ else
     echo "  Check camera connection or try different index in config"
 fi
 
+# Check internet connection
+echo ""
+echo "Checking internet connection (required for gTTS)..."
+if ping -c 1 google.com &> /dev/null; then
+    echo "✓ Internet connection available"
+else
+    echo "✗ No internet connection detected"
+    echo "  Internet connection required for gTTS (Google Text-to-Speech)"
+fi
+
 # Check ROS 1 installation
 echo ""
 echo "Checking ROS 1 installation..."
@@ -138,6 +156,13 @@ echo "   roslaunch jupiter_juno jupiter_juno_launch.launch"
 echo ""
 echo "3. Test eye detection only:"
 echo "   cd ../Eye_Detector_Script && python3 main.py"
+
+echo ""
+echo "Notes:"
+echo "======"
+echo "- gTTS (Google Text-to-Speech) requires internet connection"
+echo "- First run may be slower as gTTS downloads audio"
+echo "- For offline TTS, consider alternatives like espeak"
 
 echo ""
 echo "Setup check complete!"

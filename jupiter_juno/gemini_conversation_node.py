@@ -4,6 +4,8 @@ import os
 import yaml
 import json
 import requests
+import time
+import threading
 
 import rospy
 from std_msgs.msg import String
@@ -179,9 +181,6 @@ class GeminiConversationNode:
         response = self.generate_response(user_input)
         
         if response:
-            # Send response to TTS
-            self.send_tts(response)
-            
             # Update conversation history
             self.conversation_history.append({
                 'user': user_input,
@@ -191,10 +190,34 @@ class GeminiConversationNode:
             # Increment conversation count
             self.conversation_count += 1
             
-            # Check if max rounds reached
-            if self.conversation_count >= self.max_rounds:
-                rospy.loginfo("Max conversation rounds reached")
-                self.end_conversation()
+            # Send response to TTS
+            self.send_tts(response)
+            
+            # Wait for response to be spoken, then check if we should continue
+            # Use a separate thread to avoid blocking
+            def handle_conversation_continuation():
+                try:
+                    time.sleep(3)  # Wait for TTS response to complete
+                    
+                    # Check if conversation is still active (might have been ended elsewhere)
+                    if not self.conversation_active:
+                        return
+                    
+                    # Check if max rounds reached
+                    if self.conversation_count >= self.max_rounds:
+                        rospy.loginfo("Max conversation rounds reached")
+                        self.end_conversation()
+                    else:
+                        # Signal ready for next user input
+                        rospy.loginfo("Ready for next conversation round")
+                        self.publish_state("conversation_ready")
+                except Exception as e:
+                    rospy.logerr(f"Error in conversation continuation: {e}")
+            
+            continuation_thread = threading.Thread(target=handle_conversation_continuation)
+            continuation_thread.daemon = True  # Make thread daemon so it doesn't block shutdown
+            continuation_thread.start()
+            
         else:
             rospy.logerr("Failed to generate response")
             self.end_conversation()

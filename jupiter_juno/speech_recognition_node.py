@@ -41,6 +41,8 @@ class SpeechRecognitionNode:
         # State management
         self.is_listening = False
         self.listen_queue = queue.Queue()
+        self.waiting_for_tts_completion = False
+        self.conversation_ready = False
         
         # Publishers
         self.speech_result_publisher = rospy.Publisher(
@@ -54,6 +56,13 @@ class SpeechRecognitionNode:
             self.system_state_topic,
             String,
             self.state_callback,
+            queue_size=10
+        )
+        
+        self.tts_status_subscriber = rospy.Subscriber(
+            self.tts_status_topic,
+            String,
+            self.tts_status_callback,
             queue_size=10
         )
         
@@ -87,6 +96,7 @@ class SpeechRecognitionNode:
             topics = config['ros_topics']
             self.speech_result_topic = topics['speech_result']
             self.system_state_topic = topics['system_state']
+            self.tts_status_topic = topics['tts_status']
             
         except Exception as e:
             rospy.logerr(f"Failed to load config: {e}")
@@ -97,17 +107,34 @@ class SpeechRecognitionNode:
             self.energy_threshold = 1000
             self.speech_result_topic = '/jupiter_juno/speech_result'
             self.system_state_topic = '/jupiter_juno/system_state'
+            self.tts_status_topic = '/jupiter_juno/tts_status'
     
     def state_callback(self, msg):
         """Handle system state changes"""
         state = msg.data
         
         if state == "conversation_ready":
-            # Start listening for user response
-            rospy.loginfo("Starting to listen for user response")
-            self.listen_queue.put("start")
+            # Mark that we're ready but wait for TTS to finish
+            self.conversation_ready = True
+            self.waiting_for_tts_completion = True
+            rospy.loginfo("Conversation ready - waiting for TTS to finish speaking prompt")
         elif state == "conversation_ended":
             # Stop listening
+            self.is_listening = False
+            self.conversation_ready = False
+            self.waiting_for_tts_completion = False
+    
+    def tts_status_callback(self, msg):
+        """Handle TTS status updates"""
+        status = msg.data
+        
+        if status == "finished" and self.waiting_for_tts_completion and self.conversation_ready:
+            # TTS finished speaking the prompt, now start listening
+            rospy.loginfo("TTS finished - starting to listen for user response")
+            self.waiting_for_tts_completion = False
+            self.listen_queue.put("start")
+        elif status == "speaking":
+            # TTS is speaking, make sure we don't listen yet
             self.is_listening = False
     
     def listen_loop(self):
@@ -200,9 +227,8 @@ class SpeechRecognitionNode:
     def shutdown(self):
         """Clean up resources"""
         self.running = False
-        self.is_listening = False
         
-        # Stop listening thread
+        # Wait for listen thread to finish
         if hasattr(self, 'listen_thread'):
             self.listen_thread.join(timeout=2.0)
 
@@ -213,8 +239,6 @@ def main():
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
-    except Exception as e:
-        rospy.logerr(f"Error: {e}")
     finally:
         if 'node' in locals():
             node.shutdown()

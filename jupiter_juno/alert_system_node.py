@@ -35,6 +35,8 @@ class AlertSystemNode:
         self.is_alerting = False
         self.alert_thread = None
         self.conversation_active = False
+        self.waiting_for_tts = False
+        self.alert_sequence_step = None
         
         # Subscribers
         self.drowsiness_subscriber = rospy.Subscriber(
@@ -48,6 +50,13 @@ class AlertSystemNode:
             self.system_state_topic,
             String,
             self.system_state_callback,
+            queue_size=10
+        )
+        
+        self.tts_status_subscriber = rospy.Subscriber(
+            self.tts_status_topic,
+            String,
+            self.tts_status_callback,
             queue_size=10
         )
         
@@ -90,6 +99,7 @@ class AlertSystemNode:
             self.drowsiness_topic = topics['drowsiness_alert']
             self.tts_topic = topics['tts_request']
             self.system_state_topic = topics['system_state']
+            self.tts_status_topic = topics['tts_status']
             
         except Exception as e:
             rospy.logerr(f"Failed to load config: {e}")
@@ -105,6 +115,7 @@ class AlertSystemNode:
             self.drowsiness_topic = '/jupiter_juno/drowsiness_alert'
             self.tts_topic = '/jupiter_juno/tts_request'
             self.system_state_topic = '/jupiter_juno/system_state'
+            self.tts_status_topic = '/jupiter_juno/tts_status'
     
     def generate_alert_sound(self):
         """Generate alert beep sound"""
@@ -177,7 +188,7 @@ class AlertSystemNode:
             self.alert_thread.start()
     
     def alert_sequence(self):
-        """Execute the full alert sequence"""
+        """Execute the full alert sequence with proper TTS coordination"""
         try:
             # Play alert sound for specified duration
             end_time = time.time() + self.alert_duration
@@ -185,38 +196,56 @@ class AlertSystemNode:
                 self.play_alert_sound()
                 time.sleep(0.5)  # Short pause between beeps
             
-            # Send drowsiness message
+            # Step 1: Send drowsiness message and wait for TTS completion
+            self.alert_sequence_step = "drowsiness_message"
+            self.waiting_for_tts = True
             self.send_tts_request(self.messages['drowsiness_detected'])
-            time.sleep(3)  # Wait for TTS to complete
-            
-            # Update state to trigger conversation
-            self.publish_state("conversation_ready")
-            
-            # Send conversation prompt
-            self.send_tts_request(self.messages['conversation_prompt'])
             
         except Exception as e:
             rospy.logerr(f"Error in alert sequence: {e}")
         finally:
-            self.is_alerting = False
+            # The sequence will continue in tts_status_callback when TTS finishes
+            pass
+    
+    def tts_status_callback(self, msg):
+        """Handle TTS status updates for coordinated alert sequence"""
+        status = msg.data
+        
+        if status == "finished" and self.waiting_for_tts:
+            self.waiting_for_tts = False
+            
+            if self.alert_sequence_step == "drowsiness_message":
+                # Drowsiness message finished, now signal conversation ready and send prompt
+                rospy.loginfo("Drowsiness message finished - starting conversation sequence")
+                self.alert_sequence_step = "conversation_prompt"
+                self.waiting_for_tts = True
+                
+                # Signal that conversation is ready (speech recognition will wait for TTS)
+                self.publish_state("conversation_ready")
+                
+                # Send conversation prompt
+                self.send_tts_request(self.messages['conversation_prompt'])
+                
+            elif self.alert_sequence_step == "conversation_prompt":
+                # Conversation prompt finished, speech recognition will automatically start
+                rospy.loginfo("Conversation prompt finished - speech recognition will start listening")
+                self.alert_sequence_step = None
+                self.is_alerting = False
+                # Note: Speech recognition will start automatically when it detects TTS finished
     
     def system_state_callback(self, msg):
-        """Handle system state updates"""
+        """Handle system state changes"""
         state = msg.data
         
         if state == "conversation_started":
             self.conversation_active = True
-            self.is_alerting = False  # Stop alerts during conversation
+            rospy.loginfo("Conversation started")
         elif state == "conversation_ended":
             self.conversation_active = False
-            # Send end message
-            self.send_tts_request(self.messages['conversation_end'])
-        elif state == "shutdown":
-            # Send shutdown message
-            self.send_tts_request(self.messages['shutdown'])
+            rospy.loginfo("Conversation ended")
     
     def send_tts_request(self, text):
-        """Send text to TTS node"""
+        """Send TTS request"""
         msg = String()
         msg.data = text
         self.tts_publisher.publish(msg)
@@ -227,12 +256,15 @@ class AlertSystemNode:
         msg = String()
         msg.data = state
         self.state_publisher.publish(msg)
+        rospy.loginfo(f"State published: {state}")
     
     def shutdown(self):
         """Clean up resources"""
         self.is_alerting = False
+        
+        # Wait for alert thread to finish
         if self.alert_thread and self.alert_thread.is_alive():
-            self.alert_thread.join(timeout=1.0)
+            self.alert_thread.join(timeout=3.0)
 
 
 def main():
@@ -241,8 +273,6 @@ def main():
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
-    except Exception as e:
-        rospy.logerr(f"Error: {e}")
     finally:
         if 'node' in locals():
             node.shutdown()

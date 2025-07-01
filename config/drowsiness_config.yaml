@@ -71,6 +71,8 @@ ros_topics:
   drowsiness_alert: "/jupiter_juno/drowsiness_alert"
   # TTS request
   tts_request: "/jupiter_juno/tts_request"
+  # TTS status (speaking, finished, error)
+  tts_status: "/jupiter_juno/tts_status"
   # Speech recognition result
   speech_result: "/jupiter_juno/speech_result"
   # System state

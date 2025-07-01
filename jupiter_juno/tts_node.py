@@ -52,6 +52,13 @@ class TTSNode:
             queue_size=10
         )
         
+        # Publisher for TTS status
+        self.tts_status_publisher = rospy.Publisher(
+            self.tts_status_topic,
+            String,
+            queue_size=10
+        )
+        
         # Start TTS processing thread
         self.running = True
         self.tts_thread = threading.Thread(target=self.process_tts_queue)
@@ -80,6 +87,7 @@ class TTSNode:
             # ROS topics
             topics = config['ros_topics']
             self.tts_topic = topics['tts_request']
+            self.tts_status_topic = topics['tts_status']
             
         except Exception as e:
             rospy.logerr(f"Failed to load config: {e}")
@@ -88,6 +96,7 @@ class TTSNode:
             self.language = 'en'
             self.slow_speech = False
             self.tts_topic = '/jupiter_juno/tts_request'
+            self.tts_status_topic = '/jupiter_juno/tts_status'
     
     def init_tts_engine(self):
         """Initialize the TTS engine based on configuration"""
@@ -122,12 +131,17 @@ class TTSNode:
             try:
                 # Get text from queue with timeout
                 text = self.tts_queue.get(timeout=0.5)
+                
+                # Signal TTS start
+                self.publish_tts_status("speaking")
                 self.is_speaking = True
                 
                 # Speak the text
                 self.speak(text)
                 
+                # Signal TTS completion
                 self.is_speaking = False
+                self.publish_tts_status("finished")
                 self.tts_queue.task_done()
                 
             except queue.Empty:
@@ -135,6 +149,14 @@ class TTSNode:
             except Exception as e:
                 rospy.logerr(f"Error processing TTS: {e}")
                 self.is_speaking = False
+                self.publish_tts_status("error")
+    
+    def publish_tts_status(self, status):
+        """Publish TTS status for coordination with other nodes"""
+        msg = String()
+        msg.data = status
+        self.tts_status_publisher.publish(msg)
+        rospy.loginfo(f"TTS status: {status}")
     
     def speak(self, text):
         """Speak the given text using the configured engine"""
@@ -199,8 +221,6 @@ def main():
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
-    except Exception as e:
-        rospy.logerr(f"Error: {e}")
     finally:
         if 'node' in locals():
             node.shutdown()

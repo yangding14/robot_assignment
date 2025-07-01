@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package>
+  <name>jupiter_juno</name>
+  <version>1.0.0</version>
+  <description>Jupiter Juno Driver Drowsiness Detection System</description>
+  <maintainer email="team@jupiterjuno.com">Jupiter Juno Team</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Build dependencies (must match find_package() in CMakeLists.txt) -->
+  <build_depend>rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>cv_bridge</build_depend>
+  <build_depend>rqt_gui</build_depend>
+  <build_depend>rqt_gui_py</build_depend>
+
+  <!-- Runtime dependencies -->
+  <run_depend>rospy</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>cv_bridge</run_depend>
+  <run_depend>python-opencv</run_depend>
+  <run_depend>python-yaml</run_depend>
+  <run_depend>python-numpy</run_depend>
+  <run_depend>python-scipy</run_depend>
+  <run_depend>roslaunch</run_depend>
+  <run_depend>rqt_gui</run_depend>
+  <run_depend>rqt_gui_py</run_depend>
+  <run_depend>python_qt_binding</run_depend>
+
+  <export>
+    <rqt_gui plugin="${prefix}/plugin.xml"/>
+  </export>
+</package> 

@@ -189,11 +189,12 @@ class AlertSystemNode:
             self.send_tts_request(self.messages['drowsiness_detected'])
             time.sleep(3)  # Wait for TTS to complete
             
-            # Update state to trigger conversation
-            self.publish_state("conversation_ready")
-            
-            # Send conversation prompt
+            # Send conversation prompt and wait for it to complete
             self.send_tts_request(self.messages['conversation_prompt'])
+            time.sleep(4)  # Wait longer for prompt to complete
+            
+            # Only AFTER prompt is spoken, signal conversation ready
+            self.publish_state("conversation_ready")
             
         except Exception as e:
             rospy.logerr(f"Error in alert sequence: {e}")
@@ -209,8 +210,17 @@ class AlertSystemNode:
             self.is_alerting = False  # Stop alerts during conversation
         elif state == "conversation_ended":
             self.conversation_active = False
-            # Send end message
-            self.send_tts_request(self.messages['conversation_end'])
+            # Send end message after a short delay to ensure clean transition
+            def send_end_message():
+                try:
+                    time.sleep(1)  # Short delay for clean transition
+                    # self.send_tts_request(self.messages['conversation_end'])
+                except Exception as e:
+                    rospy.logerr(f"Error sending end message: {e}")
+            
+            end_thread = threading.Thread(target=send_end_message)
+            end_thread.daemon = True  # Make thread daemon so it doesn't block shutdown
+            end_thread.start()
         elif state == "shutdown":
             # Send shutdown message
             self.send_tts_request(self.messages['shutdown'])

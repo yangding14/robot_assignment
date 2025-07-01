@@ -4,6 +4,8 @@ import os
 import yaml
 import json
 import requests
+import time
+import threading
 
 import rospy
 from std_msgs.msg import String
@@ -173,15 +175,12 @@ class GeminiConversationNode:
             self.end_conversation()
             return
         
-        rospy.loginfo(f"User said: {user_input}")
+        rospy.loginfo(f"User said: '{user_input}'")
         
         # Generate AI response
         response = self.generate_response(user_input)
         
         if response:
-            # Send response to TTS
-            self.send_tts(response)
-            
             # Update conversation history
             self.conversation_history.append({
                 'user': user_input,
@@ -191,10 +190,26 @@ class GeminiConversationNode:
             # Increment conversation count
             self.conversation_count += 1
             
-            # Check if max rounds reached
-            if self.conversation_count >= self.max_rounds:
-                rospy.loginfo("Max conversation rounds reached")
-                self.end_conversation()
+            # Send response to TTS
+            self.send_tts(response)
+            rospy.loginfo(f"Sent to TTS: '{response}'")
+            
+            # End conversation immediately after responding - no more rounds
+            rospy.loginfo("Content delivered, ending conversation after TTS completes")
+            
+            def end_after_response():
+                try:
+                    time.sleep(4)  # Wait for TTS response to complete
+                    if self.conversation_active:
+                        rospy.loginfo("Ending conversation now")
+                        self.end_conversation()
+                except Exception as e:
+                    rospy.logerr(f"Error ending conversation: {e}")
+            
+            end_thread = threading.Thread(target=end_after_response)
+            end_thread.daemon = True
+            end_thread.start()
+            
         else:
             rospy.logerr("Failed to generate response")
             self.end_conversation()
@@ -204,14 +219,28 @@ class GeminiConversationNode:
         try:
             # Check for keywords that need specific responses
             lower_input = user_input.lower()
+            rospy.loginfo(f"Processing user input: '{user_input}' (round {self.conversation_count})")
             
-            if any(word in lower_input for word in ['joke', 'funny', 'laugh']):
+            # Handle affirmative responses - directly give a joke
+            if any(word in lower_input for word in ['yes', 'sure', 'okay', 'ok', 'please']):
+                rospy.loginfo("User gave affirmative response, providing joke")
+                prompt = f"{self.system_prompt}\n\nUser agreed to hear content. Please tell a short, clean, driving-related joke to help them stay alert."
+            elif any(word in lower_input for word in ['joke', 'funny', 'laugh', 'humor']):
+                rospy.loginfo("User requested a joke")
                 prompt = f"{self.system_prompt}\n\nUser asked for a joke. Please tell a short, clean, driving-related joke."
-            elif any(word in lower_input for word in ['tip', 'advice', 'safety']):
+            elif any(word in lower_input for word in ['tip', 'advice', 'safety', 'alert']):
+                rospy.loginfo("User requested a safety tip")
                 prompt = f"{self.system_prompt}\n\nUser asked for a driving tip. Please give a brief safety tip about staying alert while driving."
+            elif any(word in lower_input for word in ['no', 'nothing', 'skip']):
+                rospy.loginfo("User declined, ending conversation")
+                return "No problem! Stay alert and drive safely. Remember, I'm here to help keep you safe on the road."
             else:
-                prompt = f"{self.system_prompt}\n\nUser said: {user_input}\n\nPlease respond briefly and helpfully."
+                # Default to joke for unclear responses
+                rospy.loginfo("Unclear response, defaulting to joke")
+                prompt = f"{self.system_prompt}\n\nUser gave an unclear response. Please tell a short, clean, driving-related joke to help them stay alert."
             
+            # Generate response using AI backend
+            rospy.loginfo(f"Using AI backend: {self.ai_backend}")
             if self.ai_backend == 'gemini':
                 response = self.generate_gemini_response(prompt)
             elif self.ai_backend == 'openai':
@@ -219,11 +248,12 @@ class GeminiConversationNode:
             else:
                 response = self.generate_simple_response(user_input)
             
+            rospy.loginfo(f"Generated response: '{response}'")
             return response
             
         except Exception as e:
             rospy.logerr(f"Error generating response: {e}")
-            return "I'm having trouble understanding. Let me tell you a quick tip: Take regular breaks during long drives to stay alert!"
+            return "Here's a quick joke to keep you alert: Why did the bicycle fall over? Because it was two-tired! Keep your eyes on the road!"
     
     def generate_gemini_response(self, prompt):
         """Generate response using Gemini API with direct HTTP calls"""
@@ -327,25 +357,35 @@ class GeminiConversationNode:
         lower_input = user_input.lower()
         
         jokes = [
-            "Why did the bicycle fall over? Because it was two-tired!",
-            "What do you call a car that never stops? Exhausted!",
-            "Why don't cars ever get lonely? Because they come with a lot of company!",
+            "What's a car's favorite meal? A traffic jam! But let's keep moving safely!",
         ]
         
         tips = [
             "Remember to take a 15-minute break every 2 hours of driving to stay fresh!",
             "Keep your eyes moving and scan the road ahead - it helps maintain alertness!",
             "Stay hydrated! Dehydration can cause fatigue while driving.",
+            "If you feel drowsy, pull over safely and take a short nap. Better late than never!",
+            "Roll down your windows or turn up the AC to get fresh air and stay alert!",
         ]
         
-        if any(word in lower_input for word in ['joke', 'funny', 'laugh']):
+        # Handle affirmative responses - give a joke directly
+        if any(word in lower_input for word in ['yes', 'sure', 'okay', 'ok', 'please']):
             import random
             return random.choice(jokes)
-        elif any(word in lower_input for word in ['tip', 'advice', 'safety']):
+        
+        # Handle specific requests
+        elif any(word in lower_input for word in ['joke', 'funny', 'laugh', 'humor']):
+            import random
+            return random.choice(jokes)
+        elif any(word in lower_input for word in ['tip', 'advice', 'safety', 'alert']):
             import random
             return random.choice(tips)
+        elif any(word in lower_input for word in ['no', 'nothing', 'skip']):
+            return "No problem! Stay alert and drive safely. I'm here to help keep you safe on the road."
         else:
-            return "Stay alert and drive safely! Would you like a joke or a safety tip?"
+            # Default to joke for any unclear response
+            import random
+            return random.choice(jokes)
     
     def send_tts(self, text):
         """Send text to TTS node"""

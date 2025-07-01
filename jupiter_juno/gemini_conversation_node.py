@@ -357,11 +357,7 @@ class GeminiConversationNode:
         lower_input = user_input.lower()
         
         jokes = [
-            "Why did the bicycle fall over? Because it was two-tired! Keep your eyes on the road!",
-            "What do you call a car that never stops? Exhausted! Just like how you shouldn't be while driving!",
-            "Why don't cars ever get lonely? Because they come with a lot of company! Stay alert out there!",
             "What's a car's favorite meal? A traffic jam! But let's keep moving safely!",
-            "Why did the car break up with the road? It needed some space! Stay focused on yours!",
         ]
         
         tips = [

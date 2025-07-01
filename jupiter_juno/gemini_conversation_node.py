@@ -192,55 +192,23 @@ class GeminiConversationNode:
             
             # Send response to TTS
             self.send_tts(response)
+            rospy.loginfo(f"Sent to TTS: '{response}'")
             
-            # Check if this was a content delivery (joke or tip) - if so, end conversation naturally
-            lower_input = user_input.lower()
-            if any(word in lower_input for word in ['joke', 'funny', 'laugh', 'humor', 'tip', 'advice', 'safety', 'alert']):
-                # User got what they asked for, end conversation gracefully
-                rospy.loginfo("Content delivered, ending conversation naturally")
-                
-                def end_after_response():
-                    try:
-                        time.sleep(3)  # Wait for AI response to complete
-                        if self.conversation_active:  # Still active after response
-                            self.end_conversation()
-                    except Exception as e:
-                        rospy.logerr(f"Error ending conversation: {e}")
-                
-                end_thread = threading.Thread(target=end_after_response)
-                end_thread.daemon = True
-                end_thread.start()
-                return
+            # End conversation immediately after responding - no more rounds
+            rospy.loginfo("Content delivered, ending conversation after TTS completes")
             
-            # Otherwise, continue conversation if under max rounds
-            def handle_conversation_continuation():
+            def end_after_response():
                 try:
-                    time.sleep(3)  # Wait for TTS response to complete
-                    
-                    # Check if conversation is still active (might have been ended elsewhere)
-                    if not self.conversation_active:
-                        return
-                    
-                    # Check if max rounds reached
-                    if self.conversation_count >= self.max_rounds:
-                        rospy.loginfo("Max conversation rounds reached")
+                    time.sleep(4)  # Wait for TTS response to complete
+                    if self.conversation_active:
+                        rospy.loginfo("Ending conversation now")
                         self.end_conversation()
-                    else:
-                        # Only continue if the response was asking for clarification
-                        if "would you prefer" in response.lower() or "would you like" in response.lower():
-                            # Signal ready for next user input
-                            rospy.loginfo("Ready for next conversation round")
-                            self.publish_state("conversation_ready")
-                        else:
-                            # Natural ending after providing helpful response
-                            rospy.loginfo("Conversation naturally ending")
-                            self.end_conversation()
                 except Exception as e:
-                    rospy.logerr(f"Error in conversation continuation: {e}")
+                    rospy.logerr(f"Error ending conversation: {e}")
             
-            continuation_thread = threading.Thread(target=handle_conversation_continuation)
-            continuation_thread.daemon = True
-            continuation_thread.start()
+            end_thread = threading.Thread(target=end_after_response)
+            end_thread.daemon = True
+            end_thread.start()
             
         else:
             rospy.logerr("Failed to generate response")
@@ -253,12 +221,10 @@ class GeminiConversationNode:
             lower_input = user_input.lower()
             rospy.loginfo(f"Processing user input: '{user_input}' (round {self.conversation_count})")
             
-            # Handle affirmative responses to the initial prompt
-            if any(word in lower_input for word in ['yes', 'sure', 'okay', 'ok', 'please']) and self.conversation_count == 1:
-                # First response is affirmative, ask for clarification
-                rospy.loginfo("User gave affirmative response, asking for clarification")
-                return "Great! Would you prefer a quick driving joke to lighten the mood, or a safety tip to stay alert?"
-            
+            # Handle affirmative responses - directly give a joke
+            if any(word in lower_input for word in ['yes', 'sure', 'okay', 'ok', 'please']):
+                rospy.loginfo("User gave affirmative response, providing joke")
+                prompt = f"{self.system_prompt}\n\nUser agreed to hear content. Please tell a short, clean, driving-related joke to help them stay alert."
             elif any(word in lower_input for word in ['joke', 'funny', 'laugh', 'humor']):
                 rospy.loginfo("User requested a joke")
                 prompt = f"{self.system_prompt}\n\nUser asked for a joke. Please tell a short, clean, driving-related joke."
@@ -269,9 +235,9 @@ class GeminiConversationNode:
                 rospy.loginfo("User declined, ending conversation")
                 return "No problem! Stay alert and drive safely. Remember, I'm here to help keep you safe on the road."
             else:
-                # Generic helpful response
-                rospy.loginfo("Generating generic helpful response")
-                prompt = f"{self.system_prompt}\n\nUser said: {user_input}\n\nPlease respond briefly and helpfully, encouraging safe driving."
+                # Default to joke for unclear responses
+                rospy.loginfo("Unclear response, defaulting to joke")
+                prompt = f"{self.system_prompt}\n\nUser gave an unclear response. Please tell a short, clean, driving-related joke to help them stay alert."
             
             # Generate response using AI backend
             rospy.loginfo(f"Using AI backend: {self.ai_backend}")
@@ -287,7 +253,7 @@ class GeminiConversationNode:
             
         except Exception as e:
             rospy.logerr(f"Error generating response: {e}")
-            return "I'm having trouble understanding. Let me tell you a quick tip: Take regular breaks during long drives to stay alert!"
+            return "Here's a quick joke to keep you alert: Why did the bicycle fall over? Because it was two-tired! Keep your eyes on the road!"
     
     def generate_gemini_response(self, prompt):
         """Generate response using Gemini API with direct HTTP calls"""
@@ -394,6 +360,8 @@ class GeminiConversationNode:
             "Why did the bicycle fall over? Because it was two-tired! Keep your eyes on the road!",
             "What do you call a car that never stops? Exhausted! Just like how you shouldn't be while driving!",
             "Why don't cars ever get lonely? Because they come with a lot of company! Stay alert out there!",
+            "What's a car's favorite meal? A traffic jam! But let's keep moving safely!",
+            "Why did the car break up with the road? It needed some space! Stay focused on yours!",
         ]
         
         tips = [
@@ -401,14 +369,16 @@ class GeminiConversationNode:
             "Keep your eyes moving and scan the road ahead - it helps maintain alertness!",
             "Stay hydrated! Dehydration can cause fatigue while driving.",
             "If you feel drowsy, pull over safely and take a short nap. Better late than never!",
+            "Roll down your windows or turn up the AC to get fresh air and stay alert!",
         ]
         
-        # Handle affirmative responses
-        if any(word in lower_input for word in ['yes', 'sure', 'okay', 'ok', 'please']) and self.conversation_count == 1:
-            return "Great! Would you prefer a quick driving joke to lighten the mood, or a safety tip to stay alert?"
+        # Handle affirmative responses - give a joke directly
+        if any(word in lower_input for word in ['yes', 'sure', 'okay', 'ok', 'please']):
+            import random
+            return random.choice(jokes)
         
         # Handle specific requests
-        if any(word in lower_input for word in ['joke', 'funny', 'laugh', 'humor']):
+        elif any(word in lower_input for word in ['joke', 'funny', 'laugh', 'humor']):
             import random
             return random.choice(jokes)
         elif any(word in lower_input for word in ['tip', 'advice', 'safety', 'alert']):
@@ -417,11 +387,9 @@ class GeminiConversationNode:
         elif any(word in lower_input for word in ['no', 'nothing', 'skip']):
             return "No problem! Stay alert and drive safely. I'm here to help keep you safe on the road."
         else:
-            # More context-aware default response
-            if self.conversation_count == 1:
-                return "I didn't quite catch that. Would you like to hear a joke or get a safety tip to help stay alert?"
-            else:
-                return "Thanks for chatting! Remember to stay focused and drive safely."
+            # Default to joke for any unclear response
+            import random
+            return random.choice(jokes)
     
     def send_tts(self, text):
         """Send text to TTS node"""

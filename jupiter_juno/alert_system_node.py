@@ -214,7 +214,7 @@ class AlertSystemNode:
             def send_end_message():
                 try:
                     time.sleep(1)  # Short delay for clean transition
-                    self.send_tts_request(self.messages['conversation_end'])
+                    # self.send_tts_request(self.messages['conversation_end'])
                 except Exception as e:
                     rospy.logerr(f"Error sending end message: {e}")
             

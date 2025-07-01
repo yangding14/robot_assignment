@@ -31,7 +31,6 @@ class GeminiConversationNode:
         self.conversation_active = False
         self.conversation_count = 0
         self.conversation_history = []
-        self.waiting_for_tts_response = False
         
         # Publishers
         self.tts_publisher = rospy.Publisher(self.tts_topic, String, queue_size=10)
@@ -49,13 +48,6 @@ class GeminiConversationNode:
             self.system_state_topic,
             String,
             self.state_callback,
-            queue_size=10
-        )
-        
-        self.tts_status_subscriber = rospy.Subscriber(
-            self.tts_status_topic,
-            String,
-            self.tts_status_callback,
             queue_size=10
         )
         
@@ -85,7 +77,6 @@ class GeminiConversationNode:
             self.tts_topic = topics['tts_request']
             self.speech_result_topic = topics['speech_result']
             self.system_state_topic = topics['system_state']
-            self.tts_status_topic = topics['tts_status']
             
         except Exception as e:
             rospy.logerr(f"Failed to load config: {e}")
@@ -97,7 +88,6 @@ class GeminiConversationNode:
             self.tts_topic = '/jupiter_juno/tts_request'
             self.speech_result_topic = '/jupiter_juno/speech_result'
             self.system_state_topic = '/jupiter_juno/system_state'
-            self.tts_status_topic = '/jupiter_juno/tts_status'
     
     def init_ai_model(self):
         """Initialize the AI model (Gemini or alternative)"""
@@ -167,7 +157,6 @@ class GeminiConversationNode:
         self.conversation_active = True
         self.conversation_count = 0
         self.conversation_history = []
-        self.waiting_for_tts_response = False
         self.publish_state("conversation_started")
         rospy.loginfo("Conversation started")
     
@@ -190,6 +179,9 @@ class GeminiConversationNode:
         response = self.generate_response(user_input)
         
         if response:
+            # Send response to TTS
+            self.send_tts(response)
+            
             # Update conversation history
             self.conversation_history.append({
                 'user': user_input,
@@ -199,34 +191,13 @@ class GeminiConversationNode:
             # Increment conversation count
             self.conversation_count += 1
             
-            # Send response to TTS and wait for completion
-            self.waiting_for_tts_response = True
-            self.send_tts(response)
-            
-            # Check if max rounds reached (but don't end yet, wait for TTS to finish)
+            # Check if max rounds reached
             if self.conversation_count >= self.max_rounds:
-                rospy.loginfo("Max conversation rounds reached - will end after TTS finishes")
+                rospy.loginfo("Max conversation rounds reached")
+                self.end_conversation()
         else:
             rospy.logerr("Failed to generate response")
             self.end_conversation()
-    
-    def tts_status_callback(self, msg):
-        """Handle TTS status updates for multi-round conversation coordination"""
-        status = msg.data
-        
-        if status == "finished" and self.waiting_for_tts_response and self.conversation_active:
-            self.waiting_for_tts_response = False
-            
-            # Check if we should continue or end the conversation
-            if self.conversation_count >= self.max_rounds:
-                # Max rounds reached, end conversation
-                rospy.loginfo("TTS finished - ending conversation after max rounds")
-                self.end_conversation()
-            else:
-                # Continue conversation - signal ready for next user input
-                rospy.loginfo("TTS finished - ready for next user input")
-                self.publish_state("conversation_ready")
-                # Speech recognition will automatically start listening when TTS finishes
     
     def generate_response(self, user_input):
         """Generate AI response based on user input"""
@@ -381,12 +352,10 @@ class GeminiConversationNode:
         msg = String()
         msg.data = text
         self.tts_publisher.publish(msg)
-        rospy.loginfo(f"Sent response to TTS: {text}")
     
     def end_conversation(self):
         """End the conversation session"""
         self.conversation_active = False
-        self.waiting_for_tts_response = False
         self.publish_state("conversation_ended")
         rospy.loginfo("Conversation ended")
     
@@ -403,9 +372,8 @@ def main():
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
-    finally:
-        if 'node' in locals():
-            pass
+    except Exception as e:
+        rospy.logerr(f"Error: {e}")
 
 
 if __name__ == '__main__':

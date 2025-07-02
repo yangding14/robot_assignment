@@ -57,8 +57,8 @@ git clone https://github.com/yangding14/robot_assignment.git
 ### 3. Make Scripts Executable
 ```bash
 # Make Python node scripts executable
-chmod +x ~/assignment/robot_assignment/src/jupiter_juno/src/jupiter_juno/*.py
-chmod +x ~/assignment/robot_assignment/src/jupiter_juno/src/standalone_gui.py
+chmod +x ~/assignment/robot_assignment/src/jupiter_juno/*.py
+chmod +x ~/assignment/robot_assignment/src/standalone_gui.py
 ```
 
 ### 4. Add Package to ROS Environment
@@ -67,7 +67,7 @@ chmod +x ~/assignment/robot_assignment/src/jupiter_juno/src/standalone_gui.py
 export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/assignment/robot_assignment/jupiter_juno/src
 
 # Add this line to your ~/.bashrc for persistence
-echo "export ROS_PACKAGE_PATH=\$ROS_PACKAGE_PATH:~/assignment/robot_assignment/jupiter_juno/src" >> ~/.bashrc
+echo "export ROS_PACKAGE_PATH=\$ROS_PACKAGE_PATH:~/assignment/robot_assignment" >> ~/.bashrc
 ```
 
 ### 5. Build the Package
@@ -89,8 +89,6 @@ source devel/setup.bash
 ```bash
 # Set up Gemini API key for AI conversations (recommended)
 export GEMINI_API_KEY="your-gemini-api-key-here"
-
-source ~/.bashrc
 ```
 
 **Note**: The system will work without API keys by using pre-programmed fallback jokes and safety tips instead of AI-generated conversations.
@@ -112,7 +110,6 @@ pip3 install -r requirements.txt
 ```bash
 # Ensure you're in the catkin workspace and environment is sourced
 cd ~/assignment/robot_assignment
-source devel/setup.bash
 
 # Launch the complete system with GUI monitor
 roslaunch robot_assignment jupiter_juno_complete_system.launch

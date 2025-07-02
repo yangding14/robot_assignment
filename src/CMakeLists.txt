@@ -49,7 +49,6 @@ catkin_install_python(PROGRAMS
   jupiter_juno/gemini_conversation_node.py
   jupiter_juno/gui_monitor_node.py
   standalone_gui.py
-  test_system_standalone.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

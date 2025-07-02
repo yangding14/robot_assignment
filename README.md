@@ -59,7 +59,6 @@ git clone https://github.com/yangding14/robot_assignment.git
 # Make Python node scripts executable
 chmod +x ~/assignment/robot_assignment/src/jupiter_juno/src/jupiter_juno/*.py
 chmod +x ~/assignment/robot_assignment/src/jupiter_juno/src/standalone_gui.py
-chmod +x ~/assignment/robot_assignment/src/jupiter_juno/src/test_system_standalone.py
 ```
 
 ### 4. Add Package to ROS Environment

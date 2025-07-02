@@ -47,7 +47,7 @@ Connect to your Jupiter Juno robot system and ensure ROS 1 Noetic is installed a
 ### 2. Clone the Project
 ```bash
 # Navigate to your catkin workspace source directory
-mkdir assignment
+mkdir ~/assignment
 cd ~/assignment
 
 # Clone the Jupiter Juno drowsiness detection system

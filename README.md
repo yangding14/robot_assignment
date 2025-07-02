@@ -2,71 +2,18 @@
 
 A ROS 1-based intelligent co-driver system that monitors driver alertness and provides timely interventions to enhance road safety.
 
-## Features
-
-- **Real-time Eye Detection**: Monitors driver's eye aspect ratio (EAR) to detect drowsiness
-- **Multi-stage Alert System**: Audio alerts followed by engaging AI conversations
-- **Voice Interaction**: Speech recognition and text-to-speech capabilities using gTTS
-- **AI-Powered Conversations**: Uses Gemini API (via direct HTTP calls) or OpenAI as fallback for natural conversations
-- **Modular Architecture**: Built with ROS 1 for easy integration with robotic systems
-- **Configurable Parameters**: Easily adjustable thresholds and settings via YAML configuration
-
-## System Architecture
-
-The system consists of five main ROS 1 nodes:
-
-1. **Eye Detector Node**: Captures video, detects faces, and calculates Eye Aspect Ratio
-2. **Alert System Node**: Manages drowsiness alerts and system state
-3. **TTS Node**: Converts text to speech using Google Text-to-Speech (gTTS)
-4. **Speech Recognition Node**: Processes driver voice input
-5. **Gemini Conversation Node**: Handles AI-powered conversations via direct API calls
-
-## Project Structure
-
-```
-robot_assignment/                    # This directory IS the ROS package
-├── CMakeLists.txt                  # ROS build configuration
-├── package.xml                     # ROS package manifest (package name: jupiter_juno)
-├── requirements.txt                # Python dependencies
-├── jupiter_juno/                   # Python node modules
-│   ├── __init__.py
-│   ├── eye_detector_node.py        # Main eye tracking node
-│   ├── alert_system_node.py        # Alert management
-│   ├── tts_node.py                 # Text-to-speech
-│   ├── speech_recognition_node.py  # Voice input processing
-│   ├── gemini_conversation_node.py # AI conversation handler
-│   └── shape_predictor_68_face_landmarks.dat  # Face detection model
-├── launch/
-│   └── jupiter_juno_launch.launch  # Main launch file
-├── config/
-│   └── drowsiness_config.yaml      # System configuration
-├── test_system_standalone.py       # Standalone testing script
-├── quick_start.sh                  # Setup helper script
-└── README.md                       # This file
-```
-
-**Note**: 
-- The package name in `package.xml` is `jupiter_juno`, but the directory can be named anything when copied to your catkin workspace
-- This entire `robot_assignment` directory IS the ROS package - there's no nested `src/` directory within it
-- When you copy it to `~/catkin_ws/src/`, it becomes a complete ROS package
-
 ## Prerequisites
 
-- Ubuntu 20.04 (or 18.04 for ROS Melodic)
-- ROS 1 Noetic (or Melodic)
-- Python 3.8+
-- Webcam/Camera
-- Microphone and speakers
-- Internet connection (required for gTTS and Gemini API)
+- **Operating System**: Ubuntu 20.04 (or 18.04 for ROS Melodic)
+- **ROS Version**: ROS 1 Noetic (or Melodic)
+- **Python**: Python 3.8+
+- **Hardware Requirements**:
+  - Webcam/Camera for face detection
+  - Microphone for voice input
+  - Speakers/Headphones for audio output
+- **Network**: Internet connection (required for gTTS and Gemini API calls)
 
-## Installation
-
-### 1. Install ROS 1 Noetic
-
-Follow the official ROS 1 Noetic installation guide:
-- [ROS 1 Noetic (Ubuntu 20.04)](http://wiki.ros.org/noetic/Installation/Ubuntu)
-
-### 2. Install System Dependencies
+### System Dependencies
 
 ```bash
 # Update package list
@@ -92,328 +39,197 @@ sudo apt install -y \
     ros-noetic-rqt-gui-py
 ```
 
-### 3. Setup ROS Workspace and Package
+## Setup
 
+### 1. Connect to Jupiter Juno Robot
+Connect to your Jupiter Juno robot system and ensure ROS 1 Noetic is installed and properly configured.
+
+### 2. Clone the Project
 ```bash
-# Create catkin workspace if it doesn't exist
-mkdir -p ~/catkin_ws/src
-cd ~/catkin_ws/src
+# Navigate to your catkin workspace source directory
+mkdir ~/assignment
+cd ~/assignment
 
-# Copy the entire robot_assignment directory as the ROS package
-# Option 1: If you have git repository
-git clone <repository-url> jupiter_juno
+# Clone the Jupiter Juno drowsiness detection system
+git clone https://github.com/yangding14/robot_assignment.git
+```
 
-# Option 2: If you have the package folder locally
-cp -r /path/to/robot_assignment jupiter_juno
+### 3. Make Scripts Executable
+```bash
+# Make Python node scripts executable
+chmod +x ~/assignment/robot_assignment/src/jupiter_juno/jupiter_juno/*.py
+chmod +x ~/assignment/robot_assignment/src/jupiter_juno/*.py
+```
+
+### 4. Add Package to ROS Environment
+```bash
+# Add the package path to ROS_PACKAGE_PATH
+export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:~/assignment/robot_assignment/jupiter_juno/src
+
+# Add this line to your ~/.bashrc for persistence
+echo "export ROS_PACKAGE_PATH=\$ROS_PACKAGE_PATH:~/assignment/robot_assignment" >> ~/.bashrc
+```
+
+### 5. Build the Package
+```bash
+# Navigate to catkin workspace root
+cd ~/assignment/robot_assignment
+
+# Source ROS environment
+source /opt/ros/noetic/setup.bash
+
+# Build the Jupiter Juno package
+catkin_make
+
+# Source the workspace setup
+source devel/setup.bash
+```
+
+### 6. Configure API Keys
+```bash
+# Set up Gemini API key for AI conversations (recommended)
+export GEMINI_API_KEY="your-gemini-api-key-here"
+```
+
+**Note**: The system will work without API keys by using pre-programmed fallback jokes and safety tips instead of AI-generated conversations.
+
+### 7. Setup Python Environment
+```bash
+# Navigate to the package directory
+cd ~/assignment/robot_assignment
+
+# Create and activate virtual environment (optional but recommended)
+python3 -m venv venv
+source venv/bin/activate
 
 # Install Python dependencies
-cd jupiter_juno
 pip3 install -r requirements.txt
 ```
 
-### 4. Build the Package
-
+### 8. Launch the System
 ```bash
-# Go to workspace root
-cd ~/catkin_ws
+# Ensure you're in the catkin workspace and environment is sourced
+cd ~/assignment/robot_assignment
 
-# Source ROS 1
-source /opt/ros/noetic/setup.bash
-
-# Build the package
-catkin_make
-
-# Source the workspace
-source devel/setup.bash
-
-# Make Python scripts executable (from catkin_ws directory)
-chmod +x src/jupiter_juno/jupiter_juno/*.py
+# Launch the complete system with GUI monitor
+roslaunch jupiter_juno jupiter_juno_complete_system.launch
 ```
 
-## Configuration
+## Monitoring the System
 
-### Environment Variables
-
-Set up your API keys in your `~/.bashrc`:
-
+### View Active Topics
 ```bash
-# For Gemini API (recommended)
-export GEMINI_API_KEY="your-gemini-api-key"
-
-# For OpenAI API (fallback)
-export OPENAI_API_KEY="your-openai-api-key"
-
-# Apply changes
-source ~/.bashrc
-```
-
-### Configuration File
-
-Edit `config/drowsiness_config.yaml` to adjust:
-
-- **Eye Detection Parameters**:
-  - `ear_threshold`: EAR threshold for detecting closed eyes (default: 0.20)
-  - `consecutive_frames`: Frames required to confirm drowsiness (default: 48)
-  
-- **Alert Settings**:
-  - `alert_duration`: Duration of alert sound in seconds
-  - `alert_frequency`: Frequency of alert beep in Hz
-  
-- **TTS Settings**:
-  - `language`: Language for gTTS (default: 'en')
-  - `slow_speech`: Enable slower speech for clarity
-  
-- **Conversation Settings**:
-  - `max_rounds`: Maximum conversation rounds (default: 3)
-  - `system_prompt`: AI assistant personality and behavior
-
-## Usage
-
-### Quick Test (Without ROS)
-
-For a quick test without ROS setup:
-```bash
-cd robot_assignment
-python3 test_system_standalone.py
-```
-
-### Running with ROS
-
-1. **Start all nodes with the launch file:**
-
-```bash
-# Make sure you're in the workspace and sourced
-cd ~/catkin_ws
-source devel/setup.bash
-
-# Launch the complete system (console only)
-roslaunch jupiter_juno jupiter_juno_launch.launch
-
-# OR launch with GUI monitor
-roslaunch jupiter_juno jupiter_juno_with_gui_launch.launch
-```
-
-2. **Launch GUI monitor separately (if system is already running):**
-
-```bash
-# Launch only the monitoring GUI
-roslaunch jupiter_juno jupiter_juno_monitor_only_launch.launch
-
-# OR start rqt manually and load the plugin
-rqt --standalone jupiter_juno.jupiter_juno_monitor.JupiterJunoMonitor
-```
-
-2. **Or run individual nodes for testing:**
-
-```bash
-# Terminal 1: ROS Master
-roscore
-
-# Terminal 2: Eye Detector (in workspace directory)
-cd ~/catkin_ws && source devel/setup.bash
-rosrun jupiter_juno eye_detector_node.py
-
-# Terminal 3: Alert System
-rosrun jupiter_juno alert_system_node.py
-
-# Terminal 4: TTS
-rosrun jupiter_juno tts_node.py
-
-# Terminal 5: Speech Recognition
-rosrun jupiter_juno speech_recognition_node.py
-
-# Terminal 6: Gemini Conversation
-rosrun jupiter_juno gemini_conversation_node.py
-```
-
-### Monitoring the System
-
-View active topics:
-```bash
+# List all active ROS topics
 rostopic list
 ```
 
-Monitor drowsiness detection:
+### Monitor System Data
 ```bash
-rostopic echo /jupiter_juno/drowsiness_alert
-```
-
-View EAR values in real-time:
-```bash
+# Monitor real-time Eye Aspect Ratio values
 rostopic echo /jupiter_juno/ear_data
-```
 
-Monitor system state:
-```bash
+# Monitor drowsiness detection alerts
+rostopic echo /jupiter_juno/drowsiness_alert
+
+# Monitor speech recognition results
+rostopic echo /jupiter_juno/speech_result
+
+# Monitor system state transitions
 rostopic echo /jupiter_juno/system_state
+
+# Monitor TTS requests
+rostopic echo /jupiter_juno/tts_request
 ```
 
-## GUI Monitor
-
-The system includes a comprehensive **RQt-based GUI monitor** that provides real-time visualization of the drowsiness detection system.
-
-### GUI Features
-
-- **📹 Camera Feed**: Live video stream with face detection overlay
-- **📊 EAR Monitoring**: Real-time Eye Aspect Ratio values with visual progress bar
-- **🚨 Drowsiness Status**: Color-coded alert status (Green=Alert, Red=Drowsy)
-- **🎤 Speech Recognition**: Live display of user speech input
-- **🔊 TTS Output**: Text-to-speech system output log
-- **⚙️ System State**: Current system state (monitoring, conversation, etc.)
-- **🕒 Timestamps**: Last update times for all components
-
-### GUI Usage
-
+### Visualize System Architecture
 ```bash
-# Launch system with GUI
-roslaunch jupiter_juno jupiter_juno_with_gui_launch.launch
+# View ROS computation graph showing node connections
+rqt_graph
 
-# Or monitor existing system
-roslaunch jupiter_juno jupiter_juno_monitor_only_launch.launch
-
-# Or start manually through rqt
-rqt
-# Then: Plugins → Jupiter Juno → Drowsiness Monitor
+# View message flow and topic relationships
+rqt_plot
 ```
 
-The GUI automatically subscribes to all Jupiter Juno topics and updates in real-time at 10Hz.
+## Features
 
-## How It Works
+- **🔍 Real-time Eye Detection**: Advanced computer vision monitoring of driver's Eye Aspect Ratio (EAR) to detect drowsiness patterns
+- **🚨 Multi-stage Alert System**: Progressive alerting starting with audio alerts, followed by engaging AI conversations to maintain driver attention
+- **🎤 Voice Interaction**: Complete speech recognition and text-to-speech capabilities using Google TTS for natural communication
+- **🤖 AI-Powered Conversations**: Intelligent conversations powered by Gemini API with OpenAI fallback, featuring context-aware responses and driving-focused content
+- **🧩 Modular ROS Architecture**: Built with ROS 1 for seamless integration with robotic systems and hardware platforms
+- **⚙️ Configurable Parameters**: Easily adjustable detection thresholds, alert settings, and conversation parameters via YAML configuration
+- **📱 GUI Monitoring**: Comprehensive RQt-based graphical interface with real-time camera feed, EAR visualization, and system status
+- **🔧 Hardware Integration**: Designed for integration with Jupiter Juno robot hardware including camera, microphone, and speaker systems
+- **🌐 Robust Error Handling**: Graceful fallbacks for network issues, missing hardware, and API failures
+- **📊 Real-time Data Logging**: Complete ROS topic-based data flow for monitoring, debugging, and system analysis
 
-1. **Startup**: System greets the driver and begins monitoring
-2. **Monitoring**: Continuously tracks eye aspect ratio (EAR) using computer vision
-3. **Detection**: When EAR falls below threshold for 2+ seconds, drowsiness is detected
-4. **Alert**: Audio alert sounds for 3 seconds to wake the driver
-5. **Engagement**: System asks if driver wants a joke or safety tip to maintain alertness
-6. **Conversation**: Driver can respond verbally, limited to 3 exchanges to avoid distraction
-7. **Return**: System returns to monitoring mode automatically
+## System Architecture
 
-**With GUI**: All these states are visually displayed in real-time with camera feed, EAR graphs, and conversation logs.
+The Jupiter Juno drowsiness detection system operates as a distributed ROS 1 application with five core nodes working in coordination:
 
-## Troubleshooting
+### Core Nodes
 
-### Common Issues
+1. **Eye Detector Node** (`eye_detector_node.py`)
+   - **Primary Function**: Computer vision processing and drowsiness detection
+   - **Capabilities**: 
+     - Captures video feed from camera
+     - Performs real-time face detection using dlib
+     - Calculates Eye Aspect Ratio (EAR) for both eyes
+     - Monitors consecutive frames for drowsiness patterns
+     - Publishes detection results and annotated video feed
+   - **Topics Published**: `/jupiter_juno/ear_data`, `/jupiter_juno/drowsiness_alert`, `/jupiter_juno/eye_detection_image`
 
-1. **"Shape predictor file not found"**
-   - The model file should already be included in `jupiter_juno/shape_predictor_68_face_landmarks.dat`
-   - If missing, download from [dlib model repository](http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2)
-   - Extract and place in the `jupiter_juno/` directory
+2. **Alert System Node** (`alert_system_node.py`)
+   - **Primary Function**: Central coordination and alert management
+   - **Capabilities**:
+     - Monitors drowsiness alerts from eye detector
+     - Manages system state transitions (monitoring → alerting → conversation)
+     - Triggers audio alerts and conversation initiation
+     - Coordinates between detection and response systems
+   - **Topics Subscribed**: `/jupiter_juno/drowsiness_alert`
+   - **Topics Published**: `/jupiter_juno/system_state`, `/jupiter_juno/tts_request`
 
-2. **"No module named 'jupiter_juno'"**
-   - Ensure you've built the catkin workspace: `catkin_make`
-   - Source the workspace: `source ~/catkin_ws/devel/setup.bash`
-   - Check package is in `~/catkin_ws/src/jupiter_juno`
+3. **Text-to-Speech Node** (`tts_node.py`)
+   - **Primary Function**: Audio output and speech synthesis
+   - **Capabilities**:
+     - Converts text messages to natural speech using Google TTS
+     - Handles audio playback through system speakers
+     - Supports multiple languages and speech parameters
+     - Manages audio queue and timing
+   - **Topics Subscribed**: `/jupiter_juno/tts_request`
 
-3. **"Package 'jupiter_juno' not found"**
-   - Verify package.xml exists in the package root
-   - Make sure you ran `catkin_make` without errors
-   - Check ROS can find the package: `rospack find jupiter_juno`
+4. **Speech Recognition Node** (`speech_recognition_node.py`)
+   - **Primary Function**: Voice input processing
+   - **Capabilities**:
+     - Captures audio from microphone
+     - Converts speech to text using Google Speech Recognition
+     - Handles background noise and audio processing
+     - Publishes recognized speech for conversation handling
+   - **Topics Published**: `/jupiter_juno/speech_result`
 
-4. **No audio output**
-   - Check system volume and audio devices
-   - Test with: `espeak "test"`
-   - Install missing audio packages: `sudo apt install pulseaudio pavucontrol`
-   - Ensure internet connection for gTTS
+5. **Gemini Conversation Node** (`gemini_conversation_node.py`)
+   - **Primary Function**: AI-powered conversation management
+   - **Capabilities**:
+     - Processes driver responses and generates contextual replies
+     - Uses Gemini API for natural language processing
+     - Provides driving-related jokes and safety tips
+     - Falls back to pre-programmed responses if API unavailable
+     - Manages conversation flow and turn limits
+   - **Topics Subscribed**: `/jupiter_juno/speech_result`
+   - **Topics Published**: `/jupiter_juno/tts_request`
 
-5. **gTTS not working**
-   - Check internet connection (gTTS requires online access)
-   - Verify gTTS installation: `pip3 show gTTS`
-   - Check for rate limiting if making many requests
+### Integration Points
 
-6. **Speech recognition not working**
-   - Check microphone permissions
-   - Test microphone: `arecord -d 3 test.wav && aplay test.wav`
-   - Ensure internet connection for Google Speech Recognition
-   - Install audio dependencies: `sudo apt install python3-pyaudio`
+- **ROS Topics**: All communication via publish/subscribe messaging
+- **Configuration**: Centralized YAML-based parameter management
+- **Hardware**: Camera, microphone, and speaker integration
+- **External APIs**: Gemini and OpenAI for conversation intelligence
+- **GUI**: RQt-based monitoring interface for real-time visualization
 
-7. **Camera not detected**
-   - Check camera permissions and connection
-   - Try different camera index in config (0, 1, 2...)
-   - Test with: `cheese` or `ls /dev/video*`
-   - Ensure camera is not being used by another application
+### Key Package Components
 
-8. **API errors (Gemini/OpenAI)**
-   - Verify API keys are set correctly: `echo $GEMINI_API_KEY`
-   - Check API key permissions and quotas
-   - Ensure internet connection for API calls
-
-9. **GUI not working**
-   - **First, run the diagnostic script**: `python3 test_gui_setup.py`
-   - Install Qt dependencies: `sudo apt install python3-pyqt5 python3-pyqt5-dev`
-   - Install RQt dependencies: `sudo apt install ros-noetic-rqt-gui ros-noetic-rqt-gui-py`
-   - Check rqt installation: `rqt --list-plugins`
-   - Rebuild workspace after adding GUI: `catkin_make`
-   - If GUI doesn't appear: `rqt --force-discover`
-   - **If Qt issues persist, use no-GUI version**: `roslaunch jupiter_juno jupiter_juno_launch_no_gui.launch`
-
-10. **GUI shows "Waiting for camera feed"**
-    - Ensure eye_detector_node is running and publishing to `/jupiter_juno/eye_detection_image`
-    - Check camera permissions and connection
-    - Verify image topic: `rostopic echo /jupiter_juno/eye_detection_image --noarr`
-
-11. **GUI not updating data**
-    - Check all system nodes are running: `rosnode list`
-    - Verify topics are publishing: `rostopic list` and `rostopic hz /jupiter_juno/ear_data`
-    - Restart GUI if frozen: Close and relaunch rqt
-
-### Debug Mode
-
-Enable verbose logging:
-```bash
-# Set ROS logging level
-export ROSCONSOLE_CONFIG_FILE=/path/to/custom_rosconsole.conf
-
-# Or run individual nodes with debug output
-rosrun jupiter_juno eye_detector_node.py
-```
-
-View all ROS logs:
-```bash
-rqt_console
-```
-
-## Integration with Hardware
-
-To integrate with your Jupiter Juno robot hardware:
-
-1. **Camera Integration**: Modify `camera_index` in config to match your robot's camera
-2. **Audio Output**: Configure audio to route through robot's speakers  
-3. **Custom Topics**: Subscribe to additional sensor data as needed
-4. **GPIO Integration**: Add nodes for LED indicators or other hardware alerts
-
-## Technical Notes
-
-### AI Implementation
-- **Gemini API**: Uses direct HTTP calls instead of google-generativeai library for better compatibility
-- **Fallback**: OpenAI API available if Gemini fails
-- **Error Handling**: Robust error handling with graceful fallbacks
-
-### TTS Implementation
-- Uses Google Text-to-Speech (gTTS) for high-quality speech synthesis
-- Requires internet connection for speech generation
-- Supports multiple languages (configure in YAML)
-- Audio played back using pygame
-
-### Dependencies
-- **Core**: opencv-python, dlib, scipy, numpy, pyyaml
-- **Audio**: gTTS, pygame, pydub, simpleaudio, pyaudio
-- **AI**: requests (for Gemini API calls), openai, SpeechRecognition
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-
-This project is licensed under the Apache License 2.0.
-
-## Acknowledgments
-
-- dlib for facial landmark detection
-- Google Text-to-Speech for high-quality speech synthesis
-- Google Generative AI for conversation capabilities
-- ROS 1 community for the robotics framework 
+- **Launch File**: Launch configurations for different deployment scenarios
+- **Configuration**: YAML-based parameter system for easy customization
+- **GUI Options**: Both RQt plugin and standalone PyQt5 interfaces
+- **Model Files**: Pre-trained dlib model for facial landmark detection
+- **Documentation**: Comprehensive setup and usage instructions 

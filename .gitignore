@@ -1,1 +1,4 @@
 venv/
+.catkin_workspace
+build/
+devel/

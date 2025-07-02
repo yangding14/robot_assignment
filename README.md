@@ -57,8 +57,8 @@ git clone https://github.com/yangding14/robot_assignment.git
 ### 3. Make Scripts Executable
 ```bash
 # Make Python node scripts executable
+chmod +x ~/assignment/robot_assignment/src/jupiter_juno/jupiter_juno/*.py
 chmod +x ~/assignment/robot_assignment/src/jupiter_juno/*.py
-chmod +x ~/assignment/robot_assignment/src/standalone_gui.py
 ```
 
 ### 4. Add Package to ROS Environment
@@ -96,7 +96,7 @@ export GEMINI_API_KEY="your-gemini-api-key-here"
 ### 7. Setup Python Environment
 ```bash
 # Navigate to the package directory
-cd ~/assignment/robot_assignment/jupiter_juno
+cd ~/assignment/robot_assignment
 
 # Create and activate virtual environment (optional but recommended)
 python3 -m venv venv
@@ -112,7 +112,7 @@ pip3 install -r requirements.txt
 cd ~/assignment/robot_assignment
 
 # Launch the complete system with GUI monitor
-roslaunch robot_assignment jupiter_juno_complete_system.launch
+roslaunch jupiter_juno jupiter_juno_complete_system.launch
 ```
 
 ## Monitoring the System
